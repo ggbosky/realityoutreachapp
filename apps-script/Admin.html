@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project Two – administrace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fafafa; --panel:#ffffff; --ink:#0a0a0a; --ink-2:#3f3f46; --muted:#71717a; --line:#e4e4e7; --line-2:#f4f4f5;
+  --chip:#f4f4f5; --dark:#0a0a0a; --danger:#b91c1c; --ok:#15803d; --warn:#a16207; --radius:12px;
+  --shadow:0 1px 2px rgba(0,0,0,.04),0 1px 1px rgba(0,0,0,.02);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+aside{background:var(--dark);color:#fff;padding:20px 14px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:4px}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 18px;font-weight:700;letter-spacing:-.01em;font-size:16px}
+.brand .logo{width:28px;height:28px;border-radius:8px;background:#fff;color:#000;display:grid;place-items:center;font-weight:800;font-size:13px}
+.brand small{display:block;font-weight:500;color:#a1a1aa;font-size:11px;letter-spacing:.02em}
+nav button{all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:#d4d4d8;font-weight:500}
+nav button:hover{background:#18181b;color:#fff}
+nav button.active{background:#fff;color:#000}
+nav .num{margin-left:auto;font-size:11px;color:#71717a}
+nav button.active .num{color:#71717a}
+aside .foot{margin-top:auto;font-size:11px;color:#71717a;padding:0 10px}
+main{min-width:0}
+header.top{position:sticky;top:0;z-index:5;background:rgba(250,250,250,.86);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:14px 28px}
+header.top h1{font-size:18px;margin:0;letter-spacing:-.01em}
+.spacer{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:500;color:var(--ink-2);white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;background:#a1a1aa}
+.dot.on{background:var(--ok)} .dot.off{background:var(--danger)} .dot.warn{background:#ca8a04}
+.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px;font-weight:500;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:#a1a1aa}
+.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn.primary:hover{background:#27272a}
+.btn.stop{background:var(--danger);border-color:var(--danger);color:#fff;font-weight:600;letter-spacing:.01em}
+.btn.stop:hover{background:#991b1b}
+.btn.sm{padding:5px 10px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.wrap{padding:24px 28px 60px;max-width:1400px}
+.grid{display:grid;gap:16px}
+.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
+.card h3{margin:0 0 12px;font-size:13px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.04em}
+.kpi .label{color:var(--muted);font-size:12px;font-weight:500}
+.kpi .value{font-size:30px;font-weight:700;letter-spacing:-.02em;margin-top:6px;font-variant-numeric:tabular-nums}
+.kpi .sub{color:var(--muted);font-size:12px;margin-top:2px}
+.two{grid-template-columns:2fr 1fr}
+.half{grid-template-columns:1fr 1fr}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;background:#fff;position:sticky;top:0}
+td{padding:9px 10px;border-bottom:1px solid var(--line-2);vertical-align:top}
+tr.click{cursor:pointer} tr.click:hover td{background:#fafafa}
+.tbl{overflow:auto;max-height:640px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.badge{display:inline-block;border-radius:6px;padding:2px 7px;font-size:11px;font-weight:600;background:var(--chip);color:var(--ink-2);white-space:nowrap}
+.badge.dark{background:var(--ink);color:#fff}
+.badge.ok{background:#dcfce7;color:#14532d}.badge.bad{background:#fee2e2;color:#7f1d1d}.badge.warn{background:#fef9c3;color:#713f12}
+.muted{color:var(--muted)} .small{font-size:12px} .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+.bar{height:6px;border-radius:4px;background:var(--line-2);overflow:hidden;min-width:60px}
+.bar>i{display:block;height:100%;background:var(--ink)}
+.score{display:flex;align-items:center;gap:8px;font-variant-numeric:tabular-nums}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+input[type=text],input[type=email],input[type=number],input[type=time],input[type=date],input[type=url],select,textarea{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;min-width:0;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid #18181b;outline-offset:-1px}
+.toolbar input[type=text]{width:280px}
+.toolbar select{width:auto}
+textarea{min-height:120px;resize:vertical;line-height:1.5}
+label.f{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin:12px 0 6px}
+label.f .hint{font-weight:400;color:var(--muted)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid var(--line-2)}
+.switch:last-child{border-bottom:0}
+.switch b{display:block;font-weight:600}
+.switch span.d{color:var(--muted);font-size:12px}
+.tog{position:relative;width:42px;height:24px;flex:none}
+.tog input{opacity:0;width:0;height:0}
+.tog i{position:absolute;inset:0;background:#d4d4d8;border-radius:999px;transition:.15s;cursor:pointer}
+.tog i:before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.tog input:checked+i{background:var(--ink)}
+.tog input:checked+i:before{transform:translateX(18px)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px dashed #a1a1aa;border-radius:6px;padding:3px 8px;font-size:12px;cursor:pointer;background:#fff;font-family:ui-monospace,Menlo,monospace}
+.chip:hover{border-style:solid;border-color:var(--ink)}
+.preview{white-space:pre-wrap;background:#fafafa;border:1px solid var(--line);border-radius:10px;padding:16px;font-size:13px;line-height:1.6;max-height:520px;overflow:auto}
+.notice{border:1px solid var(--line);background:#fff;border-left:3px solid var(--ink);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--ink-2)}
+.notice.warn{border-left-color:#ca8a04}.notice.bad{border-left-color:var(--danger)}
+.drawer-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:20;display:none}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(720px,100%);background:#fff;z-index:21;transform:translateX(100%);transition:.2s;overflow:auto;box-shadow:-10px 0 30px rgba(0,0,0,.1)}
+.drawer.open{transform:none}.drawer-bg.open{display:block}
+.drawer .dh{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:16px 20px;display:flex;gap:10px;align-items:center}
+.drawer .db{padding:16px 20px}
+dl.kv{display:grid;grid-template-columns:150px 1fr;gap:6px 12px;margin:0;font-size:13px}
+dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;word-break:break-word}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;z-index:50;display:none;max-width:90vw}
+.toast.err{background:var(--danger)}
+.section{display:none}.section.active{display:block}
+.src{display:grid;gap:10px}
+.srch{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.srch b{font-size:15px}
+.findings{margin:0;padding-left:18px}.findings li{margin:4px 0}
+.loading{color:var(--muted);padding:20px;text-align:center}
+.pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px}
+.hide-sm{}
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.two,.half{grid-template-columns:1fr}}
+@media (max-width:820px){
+  .app{grid-template-columns:1fr}
+  aside{position:sticky;top:0;height:auto;z-index:10;flex-direction:row;align-items:center;overflow-x:auto;padding:10px 12px;gap:6px}
+  .brand{padding:0 8px 0 0;white-space:nowrap}.brand small{display:none}
+  nav{display:flex;gap:4px}nav button{padding:7px 10px;white-space:nowrap}nav .num{display:none}
+  aside .foot{display:none}
+  header.top{position:static;padding:12px 16px;flex-wrap:wrap}
+  .wrap{padding:16px}
+  .row,.row3{grid-template-columns:1fr}
+  .toolbar input[type=text]{width:100%}
+  .hide-sm{display:none}
+  dl.kv{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand"><div class="logo">P2</div><div>Project Two<small>Akvizice makléřů</small></div></div>
+    <nav id="nav">
+      <button data-s="dashboard" class="active">Dashboard</button>
+      <button data-s="contacts">Kontakty <span class="num" id="navTotal"></span></button>
+      <button data-s="sources">Katalogy a zdroje</button>
+      <button data-s="audits">Hodnocení webů</button>
+      <button data-s="templates">E-mailové šablony</button>
+      <button data-s="history">Historie odesílání</button>
+      <button data-s="legal">Právní oprávnění</button>
+      <button data-s="automation">Nastavení automatizace</button>
+    </nav>
+    <div class="foot">Europe/Prague · běží v Google Cloud</div>
+  </aside>
+  <main>
+    <header class="top">
+      <h1 id="title">Dashboard</h1>
+      <span class="pill" id="pillSystem"><span class="dot"></span>…</span>
+      <span class="pill" id="pillMode"><span class="dot"></span>…</span>
+      <span class="pill hide-sm" id="pillTick">…</span>
+      <div class="spacer"></div>
+      <button class="btn" id="btnRefresh" title="Obnovit">Obnovit</button>
+      <button class="btn stop" id="btnStop">Zastavit vše</button>
+    </header>
+
+    <!-- 1 DASHBOARD -->
+    <section class="section active wrap" id="s-dashboard">
+      <div class="grid kpis" id="kpis"></div>
+      <div class="grid two" style="margin-top:16px">
+        <div class="card"><h3>Dnešní běh</h3><div id="runBox" class="loading">Načítám…</div></div>
+        <div class="card"><h3>Zdroje</h3><div id="srcBox"></div></div>
+      </div>
+      <div class="grid half" style="margin-top:16px">
+        <div class="card"><h3>Kampaně (denní běhy)</h3><div id="campBox"></div></div>
+        <div class="card"><h3>Poslední chyby a upozornění</h3><div id="errBox"></div></div>
+      </div>
+    </section>
+
+    <!-- 2 KONTAKTY -->
+    <section class="section wrap" id="s-contacts">
+      <div class="toolbar">
+        <input type="text" id="cText" placeholder="Hledat jméno, kancelář, e-mail, město…">
+        <select id="cLegal"><option value="">Právní status: vše</option><option>NEEDS_LEGAL_REVIEW</option><option>AUTHORIZED</option><option>SUPPRESSED</option><option>NO_EMAIL</option></select>
+        <select id="cDraft"><option value="">Koncept: vše</option><option>READY</option><option>DRAFT_INTERNAL</option><option>MISSING_DATA</option><option>SENT</option><option>NONE</option><option>BLOCKED</option></select>
+        <select id="cSort"><option value="potential_score">Řadit: potenciál</option><option value="web_score">Skóre webu</option><option value="first_seen_at">Datum získání</option><option value="pre_priority">Předběžná priorita</option></select>
+        <label class="small"><input type="checkbox" id="cHigh"> jen vysoký potenciál</label>
+        <label class="small"><input type="checkbox" id="cToday"> jen dnešní</label>
+      </div>
+      <div class="tbl"><table><thead><tr><th>ID</th><th>Makléř / kancelář</th><th>Město</th><th>E-mail</th><th>Web</th><th>Skóre webu</th><th>Potenciál</th><th>Právní status</th><th>Koncept</th><th class="hide-sm">Získáno</th></tr></thead><tbody id="cBody"></tbody></table></div>
+      <div class="pager"><span class="muted small" id="cInfo"></span><button class="btn sm" id="cPrev">←</button><button class="btn sm" id="cNext">→</button></div>
+    </section>
+
+    <!-- 3 ZDROJE -->
+    <section class="section wrap" id="s-sources">
+      <div class="notice" style="margin-bottom:16px">Systém zpracuje zdroj jen tehdy, když to povoluje jeho <b>robots.txt</b> (kontroluje se živě při každém běhu) a když jsou <b>podmínky užívání ověřené</b> (tos_status = NO_RESTRICTION_FOUND / APPROVED / WRITTEN_PERMISSION s doloženým důkazem). CAPTCHA ani jiné ochrany se nikdy neobchází.</div>
+      <div class="src" id="srcList"></div>
+      <div class="card" style="margin-top:16px">
+        <h3>Přidat / upravit katalog</h3>
+        <div class="row3">
+          <div><label class="f">ID zdroje</label><input type="text" id="nsId" placeholder="napr. mujkatalog"></div>
+          <div><label class="f">Název</label><input type="text" id="nsName"></div>
+          <div><label class="f">Základní URL</label><input type="url" id="nsUrl" placeholder="https://www.example.cz"></div>
+        </div>
+        <div class="row3">
+          <div><label class="f">Modul</label><select id="nsModule"></select></div>
+          <div><label class="f">Stav podmínek (tos_status)</label><select id="nsTos"><option>NEEDS_REVIEW</option><option>NO_RESTRICTION_FOUND</option><option>APPROVED</option><option>WRITTEN_PERMISSION</option><option>PROHIBITED</option></select></div>
+          <div><label class="f">Prodleva mezi požadavky (ms) / max. stran</label><div class="row"><input type="number" id="nsDelay" value="3000"><input type="number" id="nsPages" value="10"></div></div>
+        </div>
+        <label class="f">Důkaz o ověření podmínek <span class="hint">(odkaz, datum kontroly, souhlas provozovatele)</span></label><input type="text" id="nsEvidence">
+        <label class="f">config_json <span class="hint">(pro modul generic: listUrl s {page}, itemPattern, fields – viz README)</span></label><textarea id="nsConfig" class="mono" style="min-height:100px"></textarea>
+        <div class="toolbar" style="margin-top:12px"><label class="small"><input type="checkbox" id="nsEnabled"> zapnuto</label><div class="spacer"></div><button class="btn" id="nsTest">Uložit a otestovat 1. stránku</button><button class="btn primary" id="nsSave">Uložit</button></div>
+        <div id="nsResult"></div>
+      </div>
+    </section>
+
+    <!-- 4 AUDITY -->
+    <section class="section wrap" id="s-audits">
+      <div class="toolbar"><label class="small"><input type="checkbox" id="aWeb"> jen kontakty s webem</label><div class="spacer"></div><span class="muted small">Skóre webu 0–100 (100 = výborný). Potenciál 0–100 (100 = Project Two může nejvíc pomoci). Zjištění označená [orientační] se nepoužívají v e-mailu.</span></div>
+      <div class="tbl"><table><thead><tr><th>Kontakt</th><th>Web</th><th>Skóre webu</th><th>Potenciál</th><th>Kategorie</th><th>Zjištěné nedostatky</th><th>Příležitost / služba</th></tr></thead><tbody id="aBody"></tbody></table></div>
+    </section>
+
+    <!-- 5 ŠABLONY -->
+    <section class="section wrap" id="s-templates">
+      <div class="grid half">
+        <div class="card">
+          <h3>Email settings</h3>
+          <div class="chips" id="varChips"></div>
+          <label class="f">Předmět</label><input type="text" id="eSubject" data-k="EMAIL_SUBJECT">
+          <label class="f">Text e-mailu <span class="hint">(vlastní šablona – nic není natvrdo)</span></label><textarea id="eBody" data-k="EMAIL_BODY" style="min-height:240px"></textarea>
+          <label class="f">Podpis</label><textarea id="eSig" data-k="EMAIL_SIGNATURE" style="min-height:80px"></textarea>
+          <div class="row">
+            <div><label class="f">Jméno odesílatele</label><input type="text" data-k="SENDER_NAME"></div>
+            <div><label class="f">Odesílací e-mail <span class="hint" id="aliasHint"></span></label><input type="email" data-k="SENDER_EMAIL" list="aliases"><datalist id="aliases"></datalist></div>
+          </div>
+          <div class="row">
+            <div><label class="f">Reply-To (volitelné)</label><input type="email" data-k="REPLY_TO"></div>
+            <div><label class="f">Váš e-mail pro náhledy</label><input type="email" data-k="TEST_RECIPIENT"></div>
+          </div>
+          <label class="f">Identifikace odesílatele <span class="hint">(povinné: jméno/firma, IČO, sídlo)</span></label><input type="text" data-k="SENDER_IDENTIFICATION">
+          <label class="f">Povinná patička <span class="hint">(musí obsahovat {{odhlaseni_url}})</span></label><textarea data-k="EMAIL_FOOTER" style="min-height:70px"></textarea>
+          <div class="row3">
+            <div><label class="f">Denní limit</label><input type="number" data-k="DAILY_SEND_LIMIT"></div>
+            <div><label class="f">Čas odesílání</label><input type="time" data-k="SEND_TIME"></div>
+            <div><label class="f">Pauza mezi e-maily (s)</label><input type="number" data-k="SEND_DELAY_SECONDS"></div>
+          </div>
+          <div class="row">
+            <div><label class="f">Právní rozsah sdělení</label><input type="text" data-k="EMAIL_LEGAL_SCOPE"></div>
+            <div><label class="f">Max. zpráv na adresu</label><input type="number" data-k="MAX_EMAILS_PER_CONTACT"></div>
+          </div>
+          <label class="f">URL web aplikace (odhlášení) <span class="hint" id="deployHint"></span></label><input type="url" data-k="WEBAPP_URL">
+          <div class="toolbar" style="margin-top:14px"><div class="spacer"></div><button class="btn primary" id="eSave">Uložit nastavení e-mailu</button></div>
+        </div>
+        <div class="card">
+          <h3>Náhled personalizace</h3>
+          <div class="toolbar"><input type="text" id="pId" placeholder="ID kontaktu (prázdné = nejlepší kandidát)" style="width:auto;flex:1"><button class="btn" id="pRun">Zobrazit náhled</button><button class="btn" id="pMe">Poslat náhled mně</button></div>
+          <div id="pBox" class="muted small">Náhled nic neodesílá.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 HISTORIE -->
+    <section class="section wrap" id="s-history">
+      <div class="toolbar"><select id="hStatus"><option value="">Stav: vše</option><option>SENT</option><option>TEST_NOT_SENT</option><option>BLOCKED_LEGAL</option><option>BLOCKED_SUPPRESSION</option><option>FAILED</option><option>UNCERTAIN</option><option>PENDING</option></select><span class="muted small" id="hInfo"></span></div>
+      <div class="tbl"><table><thead><tr><th>Čas</th><th>Režim</th><th>Stav</th><th>Kontakt</th><th>E-mail</th><th>Předmět</th><th>Právní podklad</th><th>Poznámka</th></tr></thead><tbody id="hBody"></tbody></table></div>
+    </section>
+
+    <!-- 7 PRÁVNÍ -->
+    <section class="section wrap" id="s-legal">
+      <div class="notice warn" style="margin-bottom:16px"><b>Pravidlo systému:</b> veřejný e-mail z katalogu <b>není</b> souhlas se zasíláním obchodních sdělení (§ 7 zák. č. 480/2004 Sb.). Automaticky se odešle jen kontaktu s ověřeným záznamem níže (souhlas nebo stávající zákazník), se shodným rozsahem a doloženým důkazem. Ostatní mají stav <b>NEEDS_LEGAL_REVIEW</b> a koncept pouze pro interní kontrolu.</div>
+      <div class="grid half">
+        <div class="card">
+          <h3>Zaznamenat právní důvod</h3>
+          <div class="row"><div><label class="f">E-mail</label><input type="email" id="lEmail"></div><div><label class="f">ID kontaktu (volitelné)</label><input type="text" id="lCid"></div></div>
+          <div class="row"><div><label class="f">Právní důvod</label><select id="lBasis"></select></div><div><label class="f">Rozsah (scope)</label><input type="text" id="lScope"></div></div>
+          <div class="row"><div><label class="f">Zdroj souhlasu</label><input type="text" id="lSource" placeholder="např. webový formulář, podepsaná objednávka"></div><div><label class="f">Důkaz (evidence_ref)</label><input type="text" id="lEvidence" placeholder="odkaz na dokument / ID záznamu"></div></div>
+          <div class="row"><div><label class="f">Datum získání</label><input type="date" id="lDate"></div><div><label class="f">Platnost do (volitelné)</label><input type="date" id="lUntil"></div></div>
+          <label class="f">Znění souhlasu / rozsah</label><textarea id="lText" style="min-height:70px"></textarea>
+          <label class="small" style="display:block;margin-top:10px"><input type="checkbox" id="lVerified"> Ověřil(a) jsem, že důkaz existuje a odpovídá tomuto rozsahu</label>
+          <div class="toolbar" style="margin-top:12px"><div class="spacer"></div><button class="btn primary" id="lSave">Uložit záznam</button></div>
+        </div>
+        <div class="card">
+          <h3>Suppression list (odmítnuté kontakty)</h3>
+          <div class="toolbar"><input type="text" id="supEmail" placeholder="email@domena.cz nebo @domena.cz" style="width:auto;flex:1"><input type="text" id="supReason" placeholder="důvod" style="width:140px"><button class="btn" id="supAdd">Přidat</button></div>
+          <div class="tbl" style="max-height:340px"><table><thead><tr><th>E-mail</th><th>Zdroj</th><th>Důvod</th><th>Datum</th><th></th></tr></thead><tbody id="supBody"></tbody></table></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px"><h3>Evidence souhlasů a právních důvodů</h3>
+        <div class="tbl"><table><thead><tr><th>ID</th><th>E-mail</th><th>Důvod</th><th>Rozsah</th><th>Zdroj / důkaz</th><th>Získáno</th><th>Ověřeno</th><th>Stav</th><th></th></tr></thead><tbody id="consBody"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- 8 AUTOMATIZACE -->
+    <section class="section wrap" id="s-automation">
+      <div class="grid half">
+        <div class="card">
+          <h3>Plánovač</h3>
+          <div id="autoSwitches"></div>
+          <div class="row3">
+            <div><label class="f">Denní počet kontaktů</label><input type="number" data-a="DAILY_CONTACT_TARGET"></div>
+            <div><label class="f">Čas skenování</label><input type="time" data-a="SCAN_TIME"></div>
+            <div><label class="f">Čas odesílání</label><input type="time" data-a="SEND_TIME"></div>
+          </div>
+          <div class="row3">
+            <div><label class="f">Denní limit e-mailů</label><input type="number" data-a="DAILY_SEND_LIMIT"></div>
+            <div><label class="f">Práh vysokého potenciálu</label><input type="number" data-a="HIGH_POTENTIAL_THRESHOLD"></div>
+            <div><label class="f">Min. potenciál pro koncept</label><input type="number" data-a="DRAFT_MIN_POTENTIAL"></div>
+          </div>
+          <div class="row">
+            <div><label class="f">Rezerva Gmail kvóty</label><input type="number" data-a="GMAIL_QUOTA_RESERVE"></div>
+            <div><label class="f">Pomalý web od (ms)</label><input type="number" data-a="SLOW_RESPONSE_MS"></div>
+          </div>
+          <label class="f">PageSpeed Insights API klíč <span class="hint">(volitelný, zdarma)</span></label><input type="text" data-a="PAGESPEED_API_KEY">
+          <label class="f">Mapování nedostatků → služba Project Two (JSON)</label><textarea data-a="SERVICE_MAP_JSON" class="mono" style="min-height:150px"></textarea>
+          <div class="toolbar" style="margin-top:12px"><div class="spacer"></div><button class="btn primary" id="aSave">Uložit</button></div>
+        </div>
+        <div class="grid" style="align-content:start">
+          <div class="card">
+            <h3>Provoz</h3>
+            <div id="trigInfo" class="small muted" style="margin-bottom:12px"></div>
+            <div class="toolbar">
+              <button class="btn" id="aResume">Obnovit provoz + plánovač</button>
+              <button class="btn" id="aTrig">Přeinstalovat plánovač</button>
+              <button class="btn" id="aScan">Spustit / pokračovat ve skenu</button>
+              <button class="btn" id="aSend">Spustit odesílání teď</button>
+              <button class="btn" id="aTests">Spustit testy systému</button>
+            </div>
+            <div id="aOut"></div>
+          </div>
+          <div class="card"><h3>Chybový log</h3><div class="tbl" style="max-height:420px"><table><thead><tr><th>Čas</th><th>Úloha</th><th>Úroveň</th><th>Zpráva</th></tr></thead><tbody id="errBody"></tbody></table></div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="drawer-bg" id="dBg"></div>
+<div class="drawer" id="drawer"><div class="dh"><b id="dTitle">Kontakt</b><div class="spacer"></div><button class="btn sm" id="dClose">Zavřít</button></div><div class="db" id="dBody"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+const $ = (s, el) => (el || document).querySelector(s);
+const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
+const esc = (s) => String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const state = { section: 'dashboard', cPage: 1, legalBases: {}, emailVars: [] };
+
+function call(fn) {
+  const args = Array.prototype.slice.call(arguments, 1);
+  return new Promise((resolve, reject) => {
+    google.script.run.withSuccessHandler((r) => {
+      if (r && r.ok === false) { toast(r.error, true); reject(new Error(r.error)); }
+      else resolve(r && r.ok ? r.data : r);
+    }).withFailureHandler((e) => { toast(e.message || String(e), true); reject(e); })[fn].apply(null, args);
+  });
+}
+function toast(msg, err) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'toast' + (err ? ' err' : ''); t.style.display = 'block';
+  clearTimeout(toast._t); toast._t = setTimeout(() => { t.style.display = 'none'; }, err ? 7000 : 3000);
+}
+const B = (v) => String(v).toUpperCase() === 'TRUE';
+function badge(v) {
+  const m = { AUTHORIZED:'ok', READY:'ok', SENT:'ok', OK:'ok', DONE:'ok', SCORED:'', NEEDS_LEGAL_REVIEW:'warn', DRAFT_INTERNAL:'warn', MISSING_DATA:'warn',
+    NEEDS_TOS_REVIEW:'warn', TEST_NOT_SENT:'', SUPPRESSED:'bad', BLOCKED:'bad', BLOCKED_ROBOTS:'bad', BLOCKED_TOS:'bad', FAILED:'bad', ERROR:'bad',
+    CRITICAL:'bad', UNCERTAIN:'bad', BLOCKED_LEGAL:'warn', BLOCKED_SUPPRESSION:'bad', UNAVAILABLE:'bad', WARN:'warn', RUNNING:'dark', CONTACTED:'ok', REPLIED:'dark' };
+  return v ? '<span class="badge ' + (m[v] || '') + '">' + esc(v) + '</span>' : '<span class="muted">–</span>';
+}
+function scoreBar(v) {
+  if (v === '' || v === null || v === undefined) return '<span class="muted">–</span>';
+  const n = Math.max(0, Math.min(100, parseInt(v, 10) || 0));
+  return '<div class="score"><b>' + n + '</b><div class="bar"><i style="width:' + n + '%"></i></div></div>';
+}
+function host(u) { return String(u || '').replace(/^https?:\/\//, '').replace(/\/$/, ''); }
+function d(s) { return s ? String(s).replace('T', ' ').substring(0, 16) : ''; }
+
+/* ---------- navigace ---------- */
+const titles = { dashboard:'Dashboard', contacts:'Kontakty', sources:'Katalogy a zdroje', audits:'Hodnocení webů', templates:'E-mailové šablony', history:'Historie odesílání', legal:'Právní oprávnění', automation:'Nastavení automatizace' };
+$$('#nav button').forEach((b) => b.addEventListener('click', () => show(b.dataset.s)));
+function show(s) {
+  state.section = s;
+  $$('#nav button').forEach((b) => b.classList.toggle('active', b.dataset.s === s));
+  $$('.section').forEach((x) => x.classList.toggle('active', x.id === 's-' + s));
+  $('#title').textContent = titles[s];
+  ({ dashboard: loadDashboard, contacts: loadContacts, sources: loadSources, audits: loadAudits, templates: loadTemplates, history: loadHistory, legal: loadLegal, automation: loadAutomation })[s]();
+  if (s !== 'dashboard') refreshHeader();
+}
+function refreshHeader() { return call('apiStatus').then((r) => headerFlags(r.flags, r.lastTick)).catch(() => {}); }
+$('#btnRefresh').addEventListener('click', () => show(state.section));
+
+/* ---------- STOP ---------- */
+$('#btnStop').addEventListener('click', async () => {
+  if (!confirm('Zastavit celý proces? Vypne se hlavní vypínač, automatické odesílání a odstraní plánovač.')) return;
+  await call('apiEmergencyStop'); toast('Vše zastaveno.'); show(state.section);
+});
+
+function headerFlags(f, lastTick) {
+  $('#pillSystem').innerHTML = '<span class="dot ' + (f.system ? 'on' : 'off') + '"></span>' + (f.system ? 'Systém běží' : 'Systém zastaven');
+  $('#pillMode').innerHTML = '<span class="dot ' + (f.testMode ? 'warn' : (f.autoSend ? 'on' : '')) + '"></span>' +
+    (f.testMode ? 'Testovací režim' : (f.autoSend ? 'Ostré odesílání ZAP' : 'Odesílání vypnuto'));
+  $('#pillTick').textContent = 'Plánovač: ' + (f.triggers ? 'aktivní' : 'NEAKTIVNÍ') + (lastTick ? ' · ' + d(lastTick) : '');
+}
+
+/* ---------- DASHBOARD ---------- */
+async function loadDashboard() {
+  const r = await call('apiDashboard');
+  const t = r.totals;
+  headerFlags(r.flags, r.lastTick);
+  $('#navTotal').textContent = t.total;
+  const k = [
+    ['Celkem nalezených makléřů', t.total, 'v databázi'],
+    ['Dnešní nové kontakty', t.today, 'cíl ' + r.flags.target + ' / den'],
+    ['Vysoký potenciál', t.high, 'skóre ≥ prahu'],
+    ['S doloženým oprávněním', t.authorized, t.needsReview + ' čeká na právní kontrolu'],
+    ['Připravené e-maily', t.drafts, t.ready + ' připraveno k odeslání'],
+    ['Odeslané e-maily', t.sent, t.sentToday + ' dnes · ' + t.testLogged + ' testovacích'],
+    ['Odmítnuté kontakty', t.suppressed, 'suppression list'],
+    ['Chybové stavy', t.errors24h + t.uncertain, t.errors24h + ' chyb / 24 h · ' + t.uncertain + ' nejistých odeslání'],
+  ];
+  $('#kpis').innerHTML = k.map((x) => '<div class="card kpi"><div class="label">' + esc(x[0]) + '</div><div class="value">' + esc(x[1]) + '</div><div class="sub">' + esc(x[2]) + '</div></div>').join('');
+  const run = r.run;
+  $('#runBox').className = '';
+  if (!run) $('#runBox').innerHTML = '<div class="muted">Zatím žádný běh. Sken se spustí v ' + esc(r.flags.scanTime) + ' (Europe/Prague) nebo ručně v Nastavení automatizace.</div>';
+  else {
+    const c = run.counters || {};
+    $('#runBox').innerHTML = '<dl class="kv"><dt>Běh</dt><dd>' + esc(run.runId) + ' ' + badge(run.phase) + (run.testMode ? ' <span class="badge">test</span>' : '') + '</dd>' +
+      '<dt>Kandidátů ve zdrojích</dt><dd>' + esc(c.candidates || 0) + ' (už v databázi: ' + esc(c.existingSeen || 0) + ')</dd>' +
+      '<dt>Nových uloženo</dt><dd>' + esc(c.new || 0) + ' / ' + esc(run.target) + '</dd>' +
+      '<dt>Vyhodnocených webů</dt><dd>' + esc(c.audited || 0) + '</dd><dt>Vysoký potenciál</dt><dd>' + esc(c.high || 0) + '</dd>' +
+      '<dt>Koncepty</dt><dd>' + esc(c.drafts || 0) + ' (oprávněno ' + esc(c.authorized || 0) + ', k právní kontrole ' + esc(c.review || 0) + ')</dd>' +
+      (run.shortfall ? '<dt>Důvod nižšího počtu</dt><dd>' + esc(run.shortfall) + '</dd>' : '') +
+      '<dt>Aktualizováno</dt><dd>' + d(run.updatedAt) + '</dd>' +
+      '<dt>Gmail kvóta</dt><dd>' + (r.flags.quota === null ? '–' : esc(r.flags.quota) + ' příjemců zbývá dnes') + '</dd>' +
+      (r.lastSend ? '<dt>Poslední odesílání</dt><dd>' + esc(JSON.stringify(r.lastSend)) + '</dd>' : '') + '</dl>';
+  }
+  $('#srcBox').innerHTML = r.sources.map((s) => '<div class="switch"><div><b>' + esc(s.name) + '</b><span class="d">' + esc(s.last_found || 0) + ' nalezeno při posledním běhu</span></div>' + badge(s.status) + '</div>').join('');
+  $('#campBox').innerHTML = r.campaigns.length ? '<table><thead><tr><th>Den</th><th>Nové</th><th>Vysoký</th><th>Koncepty</th><th>Odesláno</th><th>Stav</th></tr></thead><tbody>' +
+    r.campaigns.map((c) => '<tr><td>' + esc(c.run_date) + '</td><td>' + esc(c.new_contacts) + '</td><td>' + esc(c.high_potential) + '</td><td>' + esc(c.drafts) + '</td><td>' + esc(c.sent) + '</td><td>' + badge(c.status) + (c.shortfall_reason ? ' <span class="muted small" title="' + esc(c.shortfall_reason) + '">ⓘ</span>' : '') + '</td></tr>').join('') + '</tbody></table>' : '<div class="muted">Žádné běhy.</div>';
+  $('#errBox').innerHTML = r.recentErrors.length ? r.recentErrors.map((e) => '<div style="padding:6px 0;border-bottom:1px solid var(--line-2)">' + badge(e.severity) + ' <span class="small muted">' + d(e.ts) + ' · ' + esc(e.job) + ' ' + esc(e.source) + '</span><div class="small">' + esc(e.message) + '</div></div>').join('') : '<div class="muted">Bez chyb.</div>';
+}
+
+/* ---------- KONTAKTY ---------- */
+let cTimer = null;
+['#cText'].forEach((s) => $(s).addEventListener('input', () => { clearTimeout(cTimer); cTimer = setTimeout(() => { state.cPage = 1; loadContacts(); }, 300); }));
+['#cLegal', '#cDraft', '#cSort', '#cHigh', '#cToday'].forEach((s) => $(s).addEventListener('change', () => { state.cPage = 1; loadContacts(); }));
+$('#cPrev').addEventListener('click', () => { if (state.cPage > 1) { state.cPage--; loadContacts(); } });
+$('#cNext').addEventListener('click', () => { state.cPage++; loadContacts(); });
+async function loadContacts() {
+  $('#cBody').innerHTML = '<tr><td colspan="10" class="loading">Načítám…</td></tr>';
+  const r = await call('apiContacts', { text: $('#cText').value, legal: $('#cLegal').value, draft: $('#cDraft').value, sort: $('#cSort').value, high: $('#cHigh').checked, today: $('#cToday').checked, page: state.cPage, pageSize: 50 });
+  const pages = Math.max(1, Math.ceil(r.total / r.pageSize));
+  if (state.cPage > pages) state.cPage = pages;
+  $('#cInfo').textContent = r.total + ' kontaktů · strana ' + r.page + '/' + pages;
+  $('#cBody').innerHTML = r.rows.length ? r.rows.map((c) => '<tr class="click" data-id="' + esc(c.contact_id) + '"><td class="mono">' + esc(c.contact_id) + '</td><td><b>' + esc(c.full_name || '—') + '</b><div class="small muted">' + esc(c.office_name) + (B(c.high_potential) ? ' · <span class="badge dark">vysoký potenciál</span>' : '') + '</div></td><td>' + esc(c.city) + '</td><td class="small">' + esc(c.email) + (B(c.email_shared) ? ' <span class="badge" title="Adresu sdílí více makléřů">sdílený</span>' : '') + '</td><td class="small">' + (c.website ? esc(host(c.website)) : '<span class="muted">bez webu</span>') + '</td><td>' + scoreBar(c.web_score) + '</td><td>' + scoreBar(c.potential_score) + '</td><td>' + badge(c.legal_status) + '</td><td>' + badge(c.draft_status) + '</td><td class="small muted hide-sm">' + d(c.first_seen_at) + '</td></tr>').join('') : '<tr><td colspan="10" class="loading">Žádné kontakty.</td></tr>';
+  $$('#cBody tr.click').forEach((tr) => tr.addEventListener('click', () => openContact(tr.dataset.id)));
+}
+
+async function openContact(id) {
+  $('#drawer').classList.add('open'); $('#dBg').classList.add('open');
+  $('#dTitle').textContent = id; $('#dBody').innerHTML = '<div class="loading">Načítám…</div>';
+  const c = await call('apiContact', id);
+  const bd = c.breakdown || {};
+  const labels = { design:'Design', mobile:'Mobil', speed:'Rychlost', functionality:'Funkčnost', clarity:'Přehlednost', presentation:'Prezentace', domain:'Doména', professionalism:'Profesionalita' };
+  $('#dTitle').textContent = (c.full_name || c.office_name) + ' · ' + id;
+  $('#dBody').innerHTML =
+    '<dl class="kv"><dt>Kancelář</dt><dd>' + esc(c.office_name) + (c.office_size ? ' <span class="muted">(' + esc(c.office_size) + ' makl. v katalogu)</span>' : '') + '</dd>' +
+    '<dt>Město / kraj</dt><dd>' + esc(c.city) + ' ' + esc(c.region) + '</dd><dt>E-mail</dt><dd>' + esc(c.email) + '</dd><dt>Telefon</dt><dd>' + esc(c.phone) + '</dd>' +
+    '<dt>Web</dt><dd>' + (c.website ? '<a href="' + esc(c.website) + '" target="_blank" rel="noopener">' + esc(c.website) + '</a> <span class="muted small">(' + esc(c.website_source) + ')</span>' : '—') + '</dd>' +
+    '<dt>Zdroje</dt><dd>' + esc(c.sources) + '<div class="small">' + String(c.source_profile_urls || '').split('\n').filter(Boolean).map((u) => '<a href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(u) + '</a>').join('<br>') + '</div></dd>' +
+    '<dt>Získáno</dt><dd>' + d(c.first_seen_at) + ' (naposledy viděn ' + d(c.last_seen_at) + ')</dd>' +
+    '<dt>Priorita výběru</dt><dd>' + esc(c.pre_priority) + ' – ' + esc(c.priority_reasons) + '</dd>' +
+    '<dt>Skóre webu</dt><dd>' + scoreBar(c.web_score) + '</dd><dt>Obchodní potenciál</dt><dd>' + scoreBar(c.potential_score) + '</dd>' +
+    '<dt>Příležitost</dt><dd>' + esc(c.redesign_opportunity) + '</dd><dt>Doporučená služba</dt><dd><b>' + esc(c.recommended_service) + '</b></dd>' +
+    '<dt>Právní status</dt><dd>' + badge(c.legal_status) + (c.legalNow ? '<div class="small muted">' + esc(c.legalNow.reason) + '</div>' : '') + '</dd></dl>' +
+    '<h3 style="margin:20px 0 8px;font-size:13px">Kategorie hodnocení</h3>' + (Object.keys(bd).length ? '<div class="grid" style="grid-template-columns:1fr 1fr;gap:8px">' + Object.keys(bd).map((k) => '<div class="small">' + esc(labels[k] || k) + scoreBar(bd[k]) + '</div>').join('') + '</div>' : '<div class="muted small">–</div>') +
+    '<h3 style="margin:20px 0 8px;font-size:13px">Zjištěné nedostatky</h3><ul class="findings">' + ((c.findings || []).filter((f) => f.severity > 0 || f.code === 'ROBOTS_BLOCKED').map((f) => '<li>' + esc(f.text) + ' <span class="muted small">[' + esc(f.code) + (f.confidence !== 'HIGH' ? ', orientační' : '') + ']</span></li>').join('') || '<li class="muted">Žádné</li>') + '</ul>' +
+    '<h3 style="margin:20px 0 8px;font-size:13px">Koncept e-mailu ' + badge(c.draft_status) + '</h3>' + (c.draft_missing ? '<div class="notice warn small">' + esc(c.draft_missing) + '</div>' : '') +
+    (c.draft_body ? '<div class="preview"><b>' + esc(c.draft_subject) + '</b>\n\n' + esc(c.draft_body) + '</div>' : '<div class="muted small">Bez konceptu.</div>') +
+    '<h3 style="margin:20px 0 8px;font-size:13px">Historie komunikace</h3><div class="preview small">' + esc(c.communication_history || '–') + '</div>' +
+    '<h3 style="margin:20px 0 8px;font-size:13px">E-mail log</h3>' + (c.emailLog.length ? '<table><tbody>' + c.emailLog.map((l) => '<tr><td class="small">' + d(l.created_at) + '</td><td>' + badge(l.status) + '</td><td class="small">' + esc(l.subject) + '</td></tr>').join('') + '</tbody></table>' : '<div class="muted small">Nic neodesláno.</div>') +
+    '<label class="f">Poznámka</label><textarea id="dNotes" style="min-height:70px">' + esc(c.notes) + '</textarea>' +
+    '<div class="toolbar" style="margin-top:12px"><button class="btn" id="dSaveNotes">Uložit poznámku</button><button class="btn" id="dReaudit">Znovu vyhodnotit web</button><button class="btn" id="dPreview">Náhled e-mailu</button>' +
+    (c.email ? '<button class="btn" id="dConsent">Zaznamenat souhlas…</button><button class="btn" id="dSupp">Přidat do suppression</button>' : '') + '</div>';
+  $('#dSaveNotes').onclick = async () => { await call('apiUpdateContactNotes', id, $('#dNotes').value); toast('Uloženo'); };
+  $('#dReaudit').onclick = async () => { toast('Vyhodnocuji web…'); await call('apiReaudit', id); openContact(id); };
+  $('#dPreview').onclick = () => { closeDrawer(); show('templates'); $('#pId').value = id; runPreview(); };
+  if (c.email) {
+    $('#dConsent').onclick = () => { closeDrawer(); show('legal'); $('#lEmail').value = c.email; $('#lCid').value = id; };
+    $('#dSupp').onclick = async () => { const why = prompt('Důvod vyřazení:', 'Ručně – nekontaktovat'); if (why === null) return; await call('apiAddSuppression', c.email, why); toast('Přidáno do suppression'); openContact(id); };
+  }
+}
+function closeDrawer() { $('#drawer').classList.remove('open'); $('#dBg').classList.remove('open'); }
+$('#dClose').addEventListener('click', closeDrawer); $('#dBg').addEventListener('click', closeDrawer);
+
+/* ---------- ZDROJE ---------- */
+async function loadSources() {
+  const r = await call('apiSources');
+  $('#nsModule').innerHTML = r.modules.map((m) => '<option value="' + esc(m.id) + '">' + esc(m.id) + ' – ' + esc(m.label) + '</option>').join('');
+  $('#srcList').innerHTML = r.sources.map((s) => '<div class="card"><div class="srch"><b>' + esc(s.name) + '</b>' + badge(s.status) + '<span class="badge">robots: ' + esc(s.robots_status) + '</span><span class="badge">podmínky: ' + esc(s.tos_status) + '</span><span class="muted small">' + esc(s.base_url) + '</span><div class="spacer"></div>' +
+    '<span class="small muted">' + (B(s.enabled) ? 'zapnuto' : 'vypnuto') + '</span><button class="btn sm" data-edit="' + esc(s.source_id) + '">Upravit</button><button class="btn sm" data-test="' + esc(s.source_id) + '">Test</button></div>' +
+    '<div class="small" style="margin-top:8px">' + esc(s.tos_evidence) + '</div><div class="small muted" style="margin-top:4px">' + esc(s.notes) + ' · poslední běh ' + d(s.last_run_at) + ' · nalezeno ' + esc(s.last_found) + '</div><div data-out="' + esc(s.source_id) + '"></div></div>').join('');
+  $$('[data-edit]').forEach((b) => b.onclick = () => { const s = r.sources.find((x) => x.source_id === b.dataset.edit); fillSource(s); $('#nsId').scrollIntoView({ behavior: 'smooth' }); });
+  $$('[data-test]').forEach((b) => b.onclick = async () => { const out = $('[data-out="' + b.dataset.test + '"]'); out.innerHTML = '<div class="loading">Testuji…</div>'; const t = await call('apiTestSource', b.dataset.test).catch(() => null); out.innerHTML = renderTest(t); });
+}
+function fillSource(s) {
+  $('#nsId').value = s.source_id; $('#nsName').value = s.name; $('#nsUrl').value = s.base_url; $('#nsModule').value = s.module; $('#nsTos').value = s.tos_status;
+  $('#nsDelay').value = s.crawl_delay_ms; $('#nsPages').value = s.max_pages; $('#nsEvidence').value = s.tos_evidence; $('#nsConfig').value = s.config_json; $('#nsEnabled').checked = B(s.enabled);
+}
+function renderTest(t) {
+  if (!t) return '';
+  if (!t.ok) return '<div class="notice bad small" style="margin-top:10px">Nelze zpracovat: ' + esc(t.gate.status) + ' – ' + esc(t.gate.reason) + '</div>';
+  return '<div class="notice small" style="margin-top:10px">Nalezeno ' + esc(t.count) + ' záznamů na 1. stránce. Ukázka:<br>' + t.items.map((i) => esc([i.full_name, i.office_name, i.email, i.city].filter(Boolean).join(' · '))).join('<br>') + '</div>';
+}
+function srcForm() { return { source_id: $('#nsId').value.trim(), name: $('#nsName').value, base_url: $('#nsUrl').value.trim(), module: $('#nsModule').value, tos_status: $('#nsTos').value, crawl_delay_ms: $('#nsDelay').value, max_pages: $('#nsPages').value, tos_evidence: $('#nsEvidence').value, config_json: $('#nsConfig').value, enabled: $('#nsEnabled').checked ? 'TRUE' : 'FALSE' }; }
+$('#nsSave').onclick = async () => { await call('apiSaveSource', srcForm()); toast('Zdroj uložen'); loadSources(); };
+$('#nsTest').onclick = async () => { const f = srcForm(); await call('apiSaveSource', f); $('#nsResult').innerHTML = '<div class="loading">Testuji…</div>'; const t = await call('apiTestSource', f.source_id).catch(() => null); $('#nsResult').innerHTML = renderTest(t); loadSources(); };
+
+/* ---------- AUDITY ---------- */
+$('#aWeb').addEventListener('change', loadAudits);
+async function loadAudits() {
+  $('#aBody').innerHTML = '<tr><td colspan="7" class="loading">Načítám…</td></tr>';
+  const r = await call('apiAudits', { onlyWithWeb: $('#aWeb').checked, pageSize: 200 });
+  const labels = { design:'Design', mobile:'Mobil', speed:'Rychlost', functionality:'Funkčnost', clarity:'Přehlednost', presentation:'Prezentace', domain:'Doména', professionalism:'Profes.' };
+  $('#aBody').innerHTML = r.rows.length ? r.rows.map((c) => '<tr class="click" data-id="' + esc(c.contact_id) + '"><td><b>' + esc(c.full_name || c.office_name) + '</b><div class="small muted">' + esc(c.office_name) + '</div></td><td class="small">' + (c.website ? esc(host(c.website)) : '<span class="muted">bez webu</span>') + '</td><td>' + scoreBar(c.web_score) + '</td><td>' + scoreBar(c.potential_score) + '</td><td class="small" style="min-width:180px">' +
+    Object.keys(c.breakdown).map((k) => '<div style="display:flex;justify-content:space-between;gap:8px"><span class="muted">' + esc(labels[k] || k) + '</span><b>' + esc(c.breakdown[k]) + '</b></div>').join('') + '</td><td class="small" style="white-space:pre-wrap;min-width:260px">' + esc(c.findings_text) + '</td><td class="small" style="min-width:200px">' + esc(c.redesign_opportunity) + '<div style="margin-top:6px"><span class="badge dark">' + esc(c.recommended_service) + '</span></div></td></tr>').join('') : '<tr><td colspan="7" class="loading">Zatím žádná hodnocení.</td></tr>';
+  $$('#aBody tr.click').forEach((tr) => tr.addEventListener('click', () => openContact(tr.dataset.id)));
+}
+
+/* ---------- ŠABLONY ---------- */
+let lastFocus = null;
+async function loadTemplates() {
+  const r = await call('apiEmailSettings');
+  $$('[data-k]').forEach((el) => { el.value = r.settings[el.dataset.k] || ''; el.addEventListener('focus', () => { lastFocus = el; }); });
+  $('#aliases').innerHTML = [r.me].concat(r.aliases || []).map((a) => '<option value="' + esc(a) + '">').join('');
+  $('#aliasHint').textContent = '(váš účet nebo alias v Gmailu)';
+  $('#deployHint').textContent = r.deployedUrl ? '(nasazeno: ' + r.deployedUrl + ')' : '(nejdřív nasaďte web app)';
+  $('#varChips').innerHTML = r.vars.concat(r.systemVars).map((v) => '<span class="chip" data-v="' + esc(v) + '">{{' + esc(v) + '}}</span>').join('');
+  $$('#varChips .chip').forEach((ch) => ch.onclick = () => {
+    const el = lastFocus && (lastFocus.tagName === 'TEXTAREA' || lastFocus.type === 'text') ? lastFocus : $('#eBody');
+    const ins = '{{' + ch.dataset.v + '}}'; const s = el.selectionStart || el.value.length;
+    el.value = el.value.substring(0, s) + ins + el.value.substring(el.selectionEnd || s); el.focus(); el.selectionStart = el.selectionEnd = s + ins.length;
+  });
+}
+$('#eSave').onclick = async () => { const p = {}; $$('[data-k]').forEach((el) => { p[el.dataset.k] = el.value; }); await call('apiSaveEmailSettings', p); toast('Nastavení e-mailu uloženo'); };
+async function runPreview() {
+  $('#pBox').innerHTML = '<div class="loading">Připravuji náhled…</div>';
+  const r = await call('apiPreview', $('#pId').value.trim()).catch(() => null);
+  if (!r) { $('#pBox').innerHTML = ''; return; }
+  const issues = r.problems.concat(r.missing.map((m) => 'Chybí údaj {{' + m + '}} – zpráva se automaticky neodešle'), r.unknown.map((u) => 'Neznámá proměnná {{' + u + '}}'));
+  $('#pBox').innerHTML = '<div class="small muted" style="margin-bottom:8px">Kontakt: <b>' + esc(r.contact.contact_id) + '</b> · ' + esc(r.contact.full_name) + ' · ' + esc(r.contact.email) + ' · právně: ' + badge(r.legal.status) + '</div>' +
+    (issues.length ? '<div class="notice warn small" style="margin-bottom:10px">' + issues.map(esc).join('<br>') + '</div>' : '') +
+    '<div class="preview"><b>Předmět: ' + esc(r.subject) + '</b>\n\n' + esc(r.body) + '</div>' +
+    '<div class="small muted" style="margin-top:8px">Proměnné: ' + Object.keys(r.vars).map((k) => '{{' + esc(k) + '}} = ' + (r.vars[k] ? '„' + esc(r.vars[k]) + '“' : '<i>prázdné</i>')).join(' · ') + '</div>';
+}
+$('#pRun').onclick = runPreview;
+$('#pMe').onclick = async () => { const r = await call('apiSendPreviewToMe', $('#pId').value.trim()); toast('Náhled odeslán na ' + r.to); };
+
+/* ---------- HISTORIE ---------- */
+$('#hStatus').addEventListener('change', loadHistory);
+async function loadHistory() {
+  const r = await call('apiEmailLog', { status: $('#hStatus').value, pageSize: 300 });
+  $('#hInfo').textContent = r.total + ' záznamů';
+  $('#hBody').innerHTML = r.rows.length ? r.rows.map((l) => '<tr><td class="small">' + d(l.created_at) + '</td><td>' + badge(l.mode) + '</td><td>' + badge(l.status) + '</td><td class="mono">' + esc(l.contact_id) + '</td><td class="small">' + esc(l.email) + '</td><td class="small">' + esc(l.subject) + '</td><td class="mono">' + esc(l.legal_ref) + '</td><td class="small muted">' + esc(l.error) + '</td></tr>').join('') : '<tr><td colspan="8" class="loading">Zatím nic.</td></tr>';
+}
+
+/* ---------- PRÁVNÍ ---------- */
+async function loadLegal() {
+  const r = await call('apiLegal');
+  $('#lBasis').innerHTML = Object.keys(r.bases).map((k) => '<option value="' + esc(k) + '">' + esc(k) + ' – ' + esc(r.bases[k]) + '</option>').join('');
+  if (!$('#lScope').value) $('#lScope').value = r.scope;
+  if (!$('#lDate').value) $('#lDate').value = new Date().toISOString().substring(0, 10);
+  $('#consBody').innerHTML = r.consents.length ? r.consents.map((c) => '<tr><td class="mono">' + esc(c.consent_id) + '</td><td>' + esc(c.email) + '</td><td>' + esc(c.legal_basis) + '</td><td>' + esc(c.scope) + '</td><td class="small">' + esc(c.source) + '<div class="muted">' + esc(c.evidence_ref) + '</div></td><td class="small">' + esc(c.obtained_at) + (c.valid_until ? ' → ' + esc(c.valid_until) : '') + '</td><td>' + (B(c.verified) ? badge('OK') : badge('NEOVĚŘENO')) + '</td><td>' + (c.withdrawn_at ? badge('BLOCKED') + '<div class="small muted">' + d(c.withdrawn_at) + '</div>' : badge('AUTHORIZED')) + '</td><td>' + (c.withdrawn_at ? '' : '<button class="btn sm" data-wd="' + esc(c.consent_id) + '">Odvolat</button>') + '</td></tr>').join('') : '<tr><td colspan="9" class="loading">Žádné záznamy – bez nich se nic automaticky neodešle.</td></tr>';
+  $$('[data-wd]').forEach((b) => b.onclick = async () => { const why = prompt('Důvod odvolání:'); if (why === null) return; await call('apiWithdrawConsent', b.dataset.wd, why); toast('Odvoláno'); loadLegal(); });
+  $('#supBody').innerHTML = r.suppression.length ? r.suppression.map((s) => '<tr><td>' + esc(s.email) + '</td><td>' + badge(s.source) + '</td><td class="small">' + esc(s.reason) + '</td><td class="small">' + d(s.added_at) + '</td><td><button class="btn sm" data-rm="' + esc(s.email) + '">Odebrat</button></td></tr>').join('') : '<tr><td colspan="5" class="loading">Prázdné.</td></tr>';
+  $$('[data-rm]').forEach((b) => b.onclick = async () => { const why = prompt('Odebrání ze suppression je výjimečné. Uveďte důvod (např. přidáno omylem):'); if (!why) return; await call('apiRemoveSuppression', b.dataset.rm, why); toast('Odebráno'); loadLegal(); });
+}
+$('#lSave').onclick = async () => {
+  const rec = { email: $('#lEmail').value.trim(), contact_id: $('#lCid').value.trim(), legal_basis: $('#lBasis').value, scope: $('#lScope').value.trim(), source: $('#lSource').value.trim(), evidence_ref: $('#lEvidence').value.trim(), obtained_at: $('#lDate').value, valid_until: $('#lUntil').value, consent_text: $('#lText').value, verified: $('#lVerified').checked };
+  const id = await call('apiAddConsent', rec); toast('Uloženo jako ' + id); ['#lEmail', '#lCid', '#lSource', '#lEvidence', '#lText'].forEach((s) => { $(s).value = ''; }); $('#lVerified').checked = false; loadLegal();
+};
+$('#supAdd').onclick = async () => { await call('apiAddSuppression', $('#supEmail').value.trim(), $('#supReason').value.trim()); toast('Přidáno'); $('#supEmail').value = ''; loadLegal(); };
+
+/* ---------- AUTOMATIZACE ---------- */
+const SWITCHES = [['SYSTEM_ENABLED', 'Hlavní vypínač', 'Vypnuto = nic neběží'], ['DAILY_SCAN_ENABLED', 'Denní skenování', 'Každý den v čase skenování'], ['AUTO_SEND_ENABLED', 'Automatické odesílání', 'Jen kontaktům s doloženým oprávněním'], ['TEST_MODE', 'Testovací režim', 'Nic se neodešle, vše se jen zaloguje'], ['INBOX_MONITOR_ENABLED', 'Kontrola odpovědí', 'Odhlášení a bounce → suppression']];
+async function loadAutomation() {
+  const r = await call('apiAutomation');
+  const s = r.settings;
+  $('#autoSwitches').innerHTML = SWITCHES.map((x) => '<div class="switch"><div><b>' + esc(x[1]) + '</b><span class="d">' + esc(x[2]) + '</span></div><label class="tog"><input type="checkbox" data-sw="' + x[0] + '"' + (B(s[x[0]]) ? ' checked' : '') + '><i></i></label></div>').join('');
+  $$('[data-a]').forEach((el) => { el.value = s[el.dataset.a] || ''; });
+  $('#trigInfo').innerHTML = 'Plánovač: ' + (r.triggers.length ? '<b>aktivní</b> (' + esc(r.triggers.join(', ')) + ', každých 10 min)' : '<b>neaktivní</b>') + ' · časová zóna ' + esc(r.timezone) + (r.run ? ' · poslední běh ' + esc(r.run.runId) + ' ' + badge(r.run.phase) : '');
+  $$('[data-sw]').forEach((el) => el.onchange = async () => {
+    const k = el.dataset.sw; const v = el.checked ? 'TRUE' : 'FALSE';
+    try {
+      if (k === 'SYSTEM_ENABLED') { if (el.checked) await call('apiResume'); else await call('apiEmergencyStop'); }
+      else if (k === 'TEST_MODE' && !el.checked) {
+        if (!confirm('Vypnout testovací režim? Systém pak bude skutečně odesílat e-maily kontaktům s doloženým oprávněním (při zapnutém automatickém odesílání).')) { el.checked = true; return; }
+        await call('apiSaveAutomation', { TEST_MODE: 'FALSE', confirmLive: true });
+      } else { const p = {}; p[k] = v; await call('apiSaveAutomation', p); }
+      toast('Uloženo'); loadAutomation(); refreshHeader();
+    } catch (e) { el.checked = !el.checked; }
+  });
+  const errs = await call('apiErrors');
+  $('#errBody').innerHTML = errs.length ? errs.map((e) => '<tr><td class="small">' + d(e.ts) + '</td><td class="small">' + esc(e.job) + ' ' + esc(e.source) + '</td><td>' + badge(e.severity) + '</td><td class="small">' + esc(e.message) + '</td></tr>').join('') : '<tr><td colspan="4" class="loading">Bez chyb.</td></tr>';
+}
+$('#aSave').onclick = async () => { const p = {}; $$('[data-a]').forEach((el) => { p[el.dataset.a] = el.value; }); await call('apiSaveAutomation', p); toast('Uloženo'); };
+$('#aResume').onclick = async () => { await call('apiResume'); toast('Provoz obnoven, plánovač nainstalován. Odesílání zůstává, jak bylo nastaveno.'); loadAutomation(); };
+$('#aTrig').onclick = async () => { await call('apiInstallTriggers'); toast('Plánovač nainstalován'); loadAutomation(); };
+$('#aScan').onclick = async () => { $('#aOut').innerHTML = '<div class="loading">Skenuji (max. 4 min, pak pokračuje plánovač)…</div>'; const r = await call('apiRunScanNow', false).catch(() => null); $('#aOut').innerHTML = r ? '<div class="notice small">Fáze: ' + badge(r.phase) + ' · nových: ' + esc((r.counters || {}).new || 0) + (r.shortfall ? '<br>' + esc(r.shortfall) : '') + '</div>' : ''; };
+$('#aSend').onclick = async () => { if (!confirm('Spustit odesílání teď? (V testovacím režimu se nic neodešle.)')) return; const r = await call('apiRunSendNow'); $('#aOut').innerHTML = '<div class="notice small">' + esc(JSON.stringify(r)) + '</div>'; };
+$('#aTests').onclick = async () => { $('#aOut').innerHTML = '<div class="loading">Testuji…</div>'; const r = await call('apiRunSelfTests'); $('#aOut').innerHTML = '<div class="notice small"><b>' + r.passed + ' OK, ' + r.failed + ' chyb</b><br>' + r.results.map((x) => (x.ok ? '✓ ' : '✗ ') + esc(x.name) + ' <span class="muted">' + esc(x.ok ? x.info : x.error) + '</span>').join('<br>') + '</div>'; };
+
+show('dashboard');
+})();
+</script>
+</body>
+</html>

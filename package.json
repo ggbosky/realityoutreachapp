@@ -1,0 +1,14 @@
+{
+  "name": "project-two-broker-acquisition",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Project Two – automatická akvizice realitních makléřů (Google Apps Script + Google Sheets)",
+  "scripts": {
+    "test": "node test/run-tests.js",
+    "test:ui": "node test/admin-ui-test.js",
+    "test:live": "node test/live-test.js",
+    "push": "clasp push",
+    "deploy": "clasp deploy"
+  },
+  "license": "UNLICENSED"
+}
