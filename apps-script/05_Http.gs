@@ -49,7 +49,13 @@ function robotsCheck_(url) {
   if (entry.mode === 'ALLOW_ALL') return { allowed: true, rule: 'robots.txt neexistuje (' + entry.code + ')', crawlDelay: null };
   if (entry.mode === 'UNREACHABLE') return { allowed: false, unreachable: true, rule: 'server nedostupný (' + entry.error + ')', crawlDelay: null };
   if (entry.mode === 'DISALLOW_ALL') return { allowed: false, rule: 'robots.txt nedostupný (HTTP ' + entry.code + ') – dle RFC 9309 nepřistupujeme', crawlDelay: null };
-  return robotsIsAllowed_(entry.text, P2.ROBOTS_AGENT_TOKEN, urlPathAndQuery_(url));
+  // Apps Script přidává k User-Agentu vlastní token „Google-Apps-Script“ – přístup jen pokud ho povolují pravidla pro oba.
+  const path = urlPathAndQuery_(url);
+  const a = robotsIsAllowed_(entry.text, P2.ROBOTS_AGENT_TOKEN, path);
+  const b = robotsIsAllowed_(entry.text, 'Google-Apps-Script', path);
+  if (!a.allowed) return a;
+  if (!b.allowed) return b;
+  return { allowed: true, rule: a.rule, crawlDelay: Math.max(a.crawlDelay || 0, b.crawlDelay || 0) || null };
 }
 
 function detectCharset_(resp) {

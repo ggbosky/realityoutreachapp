@@ -75,6 +75,10 @@ test('robots.txt: specifická skupina pro náš bot má přednost, $ a * funguj�
   assert.strictEqual(U.call('robotsIsAllowed_', txt, 'ProjectTwoBot', '/a/b.pdf').allowed, false);
   assert.strictEqual(U.call('robotsIsAllowed_', txt, 'ProjectTwoBot', '/a/b.pdf?x=1').allowed, true);
 });
+test('robots.txt: zákaz pro Google-Apps-Script (token přidávaný Googlem) se respektuje', () => {
+  const env = createGasEnv({ startIso: '2026-11-12T07:00:00Z', fetchRouter: (u) => (u === 'https://gas-block.cz/robots.txt' ? { code: 200, body: 'User-agent: Google-Apps-Script\nDisallow: /\n' } : undefined) });
+  assert.strictEqual(env.call('robotsCheck_', 'https://gas-block.cz/makleri').allowed, false);
+});
 test('normalizace: telefon, e-mail, URL, jméno s tituly', () => {
   assert.strictEqual(U.call('normPhone_', '420 800 123 555'), '+420800123555');
   assert.strictEqual(U.call('normEmail_', 'MAILTO:Info@Firma.CZ?subject=x'), 'info@firma.cz');

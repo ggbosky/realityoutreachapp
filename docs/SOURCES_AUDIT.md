@@ -32,7 +32,8 @@ zapíše přesný důvod nižšího počtu. **Nic se nedoplňuje odhadem.**
 ## Co systém nikdy nedělá
 
 - neobchází CAPTCHA, přihlášení, rate-limit ani jiné ochrany (HTTP 401/403/429 = zdroj „nedostupný“ pro daný den),
-- nemaskuje se za prohlížeč – vždy se identifikuje jako `ProjectTwoBot/1.0`,
+- nemaskuje se za prohlížeč – identifikuje se jako `ProjectTwoBot/1.0` (Google k tomu v Apps Script přidává
+  `Google-Apps-Script`; robots.txt se proto vyhodnocuje pro oba identifikátory a přístup je jen když ho povolují oba),
 - nečte URL zakázané v robots.txt (kontrola u každého požadavku i přesměrování; RFC 9309),
 - nevymýšlí e-maily ani jiné údaje. Web se odvozuje jen z katalogu, nebo z firemní domény e-mailu, a to
   **jen pokud na ní web skutečně odpoví**. Freemaily (seznam.cz, gmail.com…) a domény franšíz se nepoužívají.

@@ -137,9 +137,13 @@ odesílatele (firma/jméno, IČO, sídlo), denní limit, čas odesílání. Prom
 |---|---|---|
 | `{{jmeno}}`, `{{prijmeni}}` | křestní jméno a příjmení makléře (bez titulů, 1. pád) | katalog |
 | `{{realitni_kancelar}}` | název kanceláře | katalog |
-| `{{mesto}}` | město | adresa kanceláře v katalogu / lokalita profilu |
+| `{{mesto}}` | město | adresa kanceláře v katalogu, lokalita profilu, nebo sídlo firmy v registru ARES (jen při jednoznačné shodě) |
 | `{{url_webu}}` | doména webu, např. `www.firma.cz` | katalog nebo ověřená doména firemního e-mailu |
 | `{{konkretni_postreh}}` | jedna věta s doloženým nedostatkem (malým písmenem, bez tečky), např. *„web firma.cz nemá nastavené zobrazení pro mobilní telefony (chybí značka viewport), takže se na mobilu zobrazuje zmenšená počítačová verze“* | audit webu – jen zjištění s jistotou HIGH |
+
+Tip: proměnné `{{url_webu}}` a `{{mesto}}` mají jen kontakty s webem / doloženým městem (v živém testu 56 % a
+46 %). Pokud chcete oslovit i makléře bez webu, napište text tak, aby je nepotřeboval – `{{konkretni_postreh}}`
+mají i oni (např. „v katalogu ARK ČR u vás není uvedený žádný web“).
 
 Pokud šablona použije proměnnou, pro kterou chybí ověřený údaj (např. kancelář bez osoby nemá `{{prijmeni}}`),
 koncept dostane stav **MISSING_DATA** a automaticky se **neodešle**. Patička je povinná a systém hlídá, že obsahuje
@@ -224,7 +228,7 @@ node test/admin-ui-test.js
 node test/live-test.js ./live-output
 ```
 
-- **`run-tests.js`** – 46 testů celého systému nad věrnou simulací Apps Script služeb (Sheets, Properties, Lock,
+- **`run-tests.js`** – 48 testů celého systému nad věrnou simulací Apps Script služeb (Sheets, Properties, Lock,
   Cache, UrlFetch, Gmail, triggery) a simulovaným internetem s řízeným časem.
 - **`admin-ui-test.js`** – 12 testů administrace v Chromiu (Playwright) napojené na skutečnou serverovou logiku,
   desktop i mobil.
@@ -234,7 +238,29 @@ node test/live-test.js ./live-output
 
 ### Výsledky testů (12. 11. 2026)
 
-VÝSLEDKY_ZIVEHO_TESTU
+**Offline (`run-tests.js`): 48/48 ✓** · **UI v Chromiu (`admin-ui-test.js`): 12/12 ✓** · **Živý test: ✓**
+
+| Požadovaný test | Jak ověřeno | Výsledek |
+|---|---|---|
+| Scraping všech dostupných zdrojů | živě: robots.txt všech 5 zdrojů + plný sken ARK (40 stránek) přes `tick()` | ARK povolen a zpracován (**918 unikátních kandidátů**); ČeskéReality a SuperHome zablokovány robots.txt, JenReality podmínkami, Srovnání čeká na kontrolu podmínek – nic z nich nebylo staženo |
+| Kontrola duplicit | živě: druhý běh nad stejnými daty; offline: duplicitní záznam v katalogu, stejný makléř ve 2 katalozích | 2. běh: 100 známých rozpoznáno, 5 nových, **0 duplicit**; sloučení napříč katalogy ✓ |
+| Správné ukládání kontaktů | unikátní ID `P2-000001…`, zdroj, URL profilu, datum, právní status | 100/100 ✓ |
+| Hodnocení webů | živě 100 kontaktů (56 s webem/doménou): 46 ohodnoceno, 6 parkovaných/prázdných domén rozpoznáno, 4 weby zakázaly analýzu v robots.txt (respektováno); offline sada starý/moderní/JS/parkovaný web | ✓ – zjištění ověřena ručně na vzorku |
+| Personalizace e-mailů | šablona s proměnnými; chybějící údaj → `MISSING_DATA` | ✓ (např. *„…na vaší doméně highstreet.cz je zatím jen parkovací stránka poskytovatele hostingu, ne váš vlastní web“*) |
+| Právní blokace | kontakty bez souhlasu, s neúplným/neověřeným/odvolaným/propadlým souhlasem, jiný rozsah | živě 100/100 `NEEDS_LEGAL_REVIEW`, **0 e-mailů odesláno**; offline 9 variant vadného souhlasu zablokováno |
+| Suppression list | adresa i doména, odhlášení odkazem (HMAC), odpověď „nemám zájem“, bounce, opětovný sběr | ✓ (suppression má přednost i před platným souhlasem) |
+| Gmail kvóty | kvóta pod rezervou → pozastavení; denní limit; chyba odeslání | ✓ |
+| Plánovač | trigger `tick` 10 min, Europe/Prague, sken až od 08:00, odesílání po skenu, ověření ID triggeru | ✓ |
+| Restart po chybě | síťové výpadky, limit času exekuce 0,7 s (desítky checkpointů), výpadek zdroje (503), opakovaná chyba fáze, osiřelé odeslání (PENDING → UNCERTAIN) | ✓ bez ztrát a bez duplicit |
+| STOP | tlačítko v UI, menu, zastavení během běhu | ✓ |
+
+Živý běh trval **8,5 min** (2 exekuce po 4,5 min, ~310 HTTP požadavků se zdvořilou prodlevou) a nevznikla žádná chyba.
+Město bylo doloženo u 46 ze 100 kontaktů (14 z katalogu, 32 ze sídla v ARES); u zbylých (převážně fyzické osoby
+s freemailem) ho žádný povolený zdroj neuvádí – šablona s `{{mesto}}` je proto nechá v `MISSING_DATA`.
+
+> **Co testy v tomto prostředí ověřit nemohly:** běh přímo ve vašem Google účtu (autorizace, skutečné triggery,
+> odeslání přes Gmail). Kód běžel ve věrné simulaci služeb Apps Script; skutečné HTTP požadavky šly na živé weby.
+> Po nasazení proto spusťte **Spustit testy systému** v administraci – ověří reálné napojení ve vašem účtu.
 
 ---
 
@@ -243,7 +269,7 @@ VÝSLEDKY_ZIVEHO_TESTU
 | Limit Google (účet @gmail.com) | Hodnota | Dopad |
 |---|---|---|
 | Příjemci e-mailů za den | **100** (Workspace: 1 500) | `DAILY_SEND_LIMIT` výchozí 20; systém hlídá `MailApp.getRemainingDailyQuota()` s rezervou a při vyčerpání se pozastaví do dalšího dne |
-| Celková doba běhu triggerů | 90 min / den | Denní běh trvá dle živého testu cca DOBA_BEHU; nečinné ticky ~1–2 s |
+| Celková doba běhu triggerů | 90 min / den | Denní běh trvá dle živého testu cca 9 min; nečinné ticky ~1–2 s |
 | Jedna exekuce | 6 min | Pipeline pracuje po 4,5 min a pokračuje z checkpointu |
 | UrlFetch volání | 20 000 / den | Denní běh potřebuje řádově stovky |
 | Přesnost spuštění | ± 10 min | Trigger běží každých 10 min, sken startuje v prvním ticku po `SCAN_TIME` (08:00–08:10) |
