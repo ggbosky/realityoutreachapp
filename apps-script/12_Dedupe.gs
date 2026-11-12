@@ -60,12 +60,30 @@ function buildCandidates_(poolItems) {
   });
   const usedOffices = {};
 
+  // Indexy kanceláří pro doložitelné párování (jen jednoznačné shody).
+  const offByEmail = {}, offByDomain = {}, offByPhone = {};
+  const addIdx = function (idx, k, o) { if (k) (idx[k] = idx[k] || []).push(o); };
+  Object.keys(offices).forEach(function (k) {
+    const o = offices[k];
+    const e = normEmail_(o.email);
+    addIdx(offByEmail, e, o);
+    const doms = uniq_([e && !isFreemail_(e) ? emailDomain_(e).replace(/^www\./, '') : '', urlHost_(o.website)]);
+    doms.forEach(function (d) { if (d && !isFranchise_(d)) addIdx(offByDomain, d, o); });
+    addIdx(offByPhone, normPhone_(o.phone), o);
+  });
+  const unique = function (arr) { return arr && uniq_(arr.map(function (o) { return o.source_key; })).length === 1 ? arr[0] : null; };
+
   people.forEach(function (p) {
     let off = p.office_key ? offices[p.office_key] : null;
+    if (off) p.office_match = 'LINK';
     if (!off && p.office_name) {
       const byName = officesByName[normCompany_(p.office_name)];
-      if (byName && byName.length === 1) off = byName[0]; // jen jednoznačná shoda
+      if (byName && byName.length === 1) { off = byName[0]; p.office_match = 'NAME'; } // jen jednoznačná shoda
     }
+    const pe = normEmail_(p.email);
+    if (!off && pe) { off = unique(offByEmail[pe]); if (off) p.office_match = 'EMAIL'; }
+    if (!off && pe && !isFreemail_(pe)) { off = unique(offByDomain[emailDomain_(pe).replace(/^www\./, '')]); if (off) p.office_match = 'EMAIL_DOMAIN'; }
+    if (!off && normPhone_(p.phone)) { off = unique(offByPhone[normPhone_(p.phone)]); if (off) p.office_match = 'PHONE'; }
     if (off) {
       usedOffices[off.source_key] = true;
       p.office_key = off.source_key;

@@ -24,7 +24,7 @@ const P2 = {
 const SCHEMA = {
   CONTACTS: [
     'contact_id', 'status', 'contact_type', 'full_name', 'first_name', 'last_name',
-    'office_name', 'office_size', 'city', 'region', 'email', 'email_shared', 'phone',
+    'office_name', 'office_size', 'city', 'region', 'city_source', 'ico', 'email', 'email_shared', 'phone',
     'website', 'website_source', 'own_domain', 'sources', 'source_profile_urls',
     'first_seen_at', 'last_seen_at', 'discovered_run', 'pre_priority', 'priority_reasons',
     'audit_status', 'audited_at', 'web_score', 'web_score_breakdown', 'findings_json',
@@ -117,6 +117,7 @@ const DEFAULT_SETTINGS = [
   // --- Výběr a hodnocení ---
   ['HIGH_POTENTIAL_THRESHOLD', '70', 'Skóre potenciálu, od kterého je kontakt „vysoký potenciál“.'],
   ['DRAFT_MIN_POTENTIAL', '50', 'Min. skóre potenciálu pro přípravu konceptu e-mailu.'],
+  ['ARES_ENRICH_ENABLED', 'TRUE', 'Doplnit město (sídlo) a IČO z veřejného registru ARES u firem bez města v katalogu (jen při jednoznačné shodě názvu).'],
   ['PAGESPEED_API_KEY', '', 'Volitelný klíč Google PageSpeed Insights API (zdarma) pro přesnější měření rychlosti a mobilní verze.'],
   ['SLOW_RESPONSE_MS', '3000', 'Odezva nad touto hodnotou = pomalý web.'],
   ['SERVICE_MAP_JSON', JSON.stringify({

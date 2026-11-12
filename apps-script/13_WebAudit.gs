@@ -88,6 +88,17 @@ function analyzeSite_(m) {
 
   const html = String(m.html || '');
   const lower = html.toLowerCase();
+
+  // Parkovaná doména / výchozí stránka hostingu = nejde o web makléře – žádná tvrzení o obsahu.
+  const parked = detectParkedPage_(html);
+  if (parked) {
+    facts.analyzable = false;
+    facts.parked = parked;
+    add('PARKED_DOMAIN', 'domain', 3, 'HIGH', 'Na doméně ' + host + ' je jen ' + parked + ', ne web makléře.', parked,
+      'na vaší doméně ' + host + ' je zatím jen ' + parked + ', ne váš vlastní web');
+    return { findings: findings, facts: facts };
+  }
+
   const head = lower.substring(0, Math.max(lower.indexOf('</head>'), 5000));
   const bodyText = htmlToText_(html.replace(/<head[\s\S]*?<\/head>/i, ''));
   facts.analyzable = true;
@@ -98,7 +109,11 @@ function analyzeSite_(m) {
   facts.https = !!m.httpsOk;
   facts.finalUrl = m.finalUrl;
   const scriptCount = (lower.match(/<script/g) || []).length;
-  const jsOnly = bodyText.length < 250 && scriptCount >= 3;
+  // Obsah vykreslovaný JavaScriptem nebo načítaný do iframe nelze bez prohlížeče posoudit.
+  const bodyLower = lower.replace(/<head[\s\S]*?<\/head>/, '');
+  const bodyScripts = (bodyLower.match(/<script/g) || []).length;
+  const jsOnly = bodyText.length < 250 && (/<iframe/.test(bodyLower) || bodyScripts >= 3 ||
+    /id=["'](app|root|__next|__nuxt|svelte)["']/.test(bodyLower) || (bodyScripts >= 1 && bodyText.length < 40));
   facts.jsRendered = jsOnly;
 
   // --- Funkčnost / zabezpečení ---
@@ -242,4 +257,28 @@ function contactLevelFindings_(c, sourceLabel) {
       postreh: 'jako kontaktní e-mail používáte adresu na ' + emailDomain_(email) + ', ne na vlastní doméně' });
   }
   return f;
+}
+
+/**
+ * Rozpozná parkovací stránky registrátorů, výchozí stránky serverů a „web ve výstavbě“.
+ * @return {string} popis (např. „parkovací stránka poskytovatele hostingu“) nebo ''
+ */
+function detectParkedPage_(html) {
+  const h = String(html || '');
+  if (h.replace(/\s+/g, '').length < 60) return 'prázdná stránka';
+  const low = stripDiacritics_(h).toLowerCase();
+  const text = stripDiacritics_(htmlToText_(h)).toLowerCase();
+  // FORPSI: obal s iframe, který podle jazyka načte CZ/index.html s parkovací stránkou (ověřeno 2026-11-12)
+  if (/id=["']ifr["']/.test(low) && /isrc\s*=\s*["']cz\/index\.html/.test(low)) return 'parkovací stránka poskytovatele hostingu';
+  const parkedRe = [
+    /parking_banner/, /domain (is )?parked/, /this domain (is|may be) for sale/, /domena je (na prodej|k prodeji)/,
+    /tato domena je (zaparkovana|registrovana)/, /sedoparking|parkingcrew|bodis\.com|dan\.com\/buy-domain/,
+    /domena byla (uspesne )?zaregistrovana/, /webhosting (je|byl) (uspesne )?(aktivovan|zrizen)/,
+  ];
+  if (parkedRe.some(function (re) { return re.test(low); })) return 'parkovací stránka poskytovatele hostingu';
+  const defaultRe = [/apache2 (ubuntu|debian) default page/, /welcome to nginx!?/, /^\s*it works!?\s*$/, /iis windows server/,
+    /default web site page/, /index of \//, /plesk (obsidian|onyx)? ?default page|web server's default page/, /cpanel.{0,40}default/];
+  if (defaultRe.some(function (re) { return re.test(text) || re.test(low.substring(0, 3000)); })) return 'výchozí stránka webového serveru';
+  if (text.length < 400 && /(web|stranky?) (je |jsou )?ve vystavbe|under construction|coming soon|pripravujeme novy web/.test(text)) return 'stránka „web ve výstavbě“';
+  return '';
 }

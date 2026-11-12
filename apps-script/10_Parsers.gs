@@ -191,3 +191,24 @@ function parseGeneric_(html, config, pageUrl) {
   }
   return { items: items, maxPage: config.maxPages || 1 };
 }
+
+/* ------------------------------- ARES ------------------------------- */
+
+const LEGAL_FORM_RE = /\b(s\.?\s?r\.?\s?o\.?|spol\.\s?s\s?r\.?\s?o\.?|a\.\s?s\.|v\.\s?o\.\s?s\.|k\.\s?s\.|z\.\s?s\.|o\.\s?p\.\s?s\.)\s*$/i;
+
+function hasLegalForm_(name) { return LEGAL_FORM_RE.test(oneLine_(name)); }
+
+/** Kanonický tvar názvu firmy pro přesné porovnání (velikost písmen, diakritika, mezery a tečky v právní formě). */
+function canonCompany_(name) {
+  return normText_(String(name || '').replace(/,/g, ' ')).replace(/\bspol s r o\b/, 's r o').replace(/\s+/g, ' ').trim();
+}
+
+/** Z odpovědi ARES vybere subjekt s přesně shodným názvem – jen pokud je jediný. */
+function pickAresMatch_(json, name) {
+  const want = canonCompany_(name);
+  const list = (json && json.ekonomickeSubjekty) || [];
+  const hits = list.filter(function (e) { return canonCompany_(e.obchodniJmeno) === want; });
+  if (hits.length !== 1) return null;
+  const sidlo = hits[0].sidlo || {};
+  return { ico: String(hits[0].ico || ''), city: sidlo.nazevObce || '', address: sidlo.textovaAdresa || '' };
+}

@@ -235,6 +235,7 @@ function phaseSelect_(state) {
       contact_id: ids[i], status: CONTACT_STATUS.NEW, contact_type: c.contact_type || 'BROKER',
       full_name: n.clean || c.full_name || '', first_name: n.first, last_name: n.last,
       office_name: c.office_name || '', office_size: c.office_size || '', city: c.city || '', region: c.region || '',
+      city_source: c.city ? (c.city_source || 'CATALOG') : '',
       email: email, email_shared: email && emailCounts[email] > 1 ? 'TRUE' : 'FALSE', phone: c.phone || '',
       website: c.website || '', website_source: c.website ? (c.website_source || 'CATALOG') : '', own_domain: '',
       sources: (c.sources || []).join(','), source_profile_urls: (c.profile_urls || []).join('\n'),
@@ -269,6 +270,23 @@ function phaseSelect_(state) {
 
 function phaseEnrich_(state, deadline) {
   const ct = table_('CONTACTS');
+  // 1) ARES – sídlo a IČO firem bez města
+  if (settingBool_('ARES_ENRICH_ENABLED')) {
+    const aresTodo = ct.readAll().filter(function (c) {
+      return c.discovered_run === state.runId && !c.city && c.audit_status === 'PENDING' && hasLegalForm_(c.office_name) && !/\[ares\]/.test(String(c.notes));
+    });
+    for (let i = 0; i < aresTodo.length; i++) {
+      if (Date.now() >= deadline) return;
+      const c = aresTodo[i];
+      const patch = { notes: (c.notes ? c.notes + ' ' : '') + '[ares]' };
+      try {
+        const a = aresLookup_(c.office_name);
+        if (a && a.city) { patch.city = a.city; patch.city_source = 'ARES_SIDLO'; patch.ico = a.ico; }
+      } catch (e) { logError_('enrich', 'ares', 'WARN', String(e.message || e), c.office_name); }
+      ct.update(c, patch);
+    }
+  }
+  // 2) Srovnání makléřů – lokalita z profilu
   const srcRows = table_('SOURCES').readAll();
   const srov = srcRows.filter(function (s) { return s.source_id === 'srovnani'; })[0];
   const todo = ct.readAll().filter(function (c) {

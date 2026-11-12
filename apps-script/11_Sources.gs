@@ -49,7 +49,7 @@ const SOURCE_MODULES = {
       const res = ctx.fetch(profileUrl);
       if (!res.ok) return {};
       const p = parseSrovnaniProfile_(res.text);
-      return p.city ? { city: p.city } : {};
+      return p.city ? { city: p.city, city_source: 'SROVNANI_PROFIL' } : {};
     },
   },
 
@@ -183,4 +183,23 @@ function makeSourceCtx_(src, knownKeys) {
     fetch: function (url) { return httpGet_(url, { crawlDelayMs: toInt_(src.crawl_delay_ms, 2000) }); },
     isKnownKey: function (k) { return !!knownKeys[k]; },
   };
+}
+
+/**
+ * Veřejný registr ARES (Ministerstvo financí, otevřená data) – sídlo a IČO firmy.
+ * Volá se jen pro názvy s právní formou; výsledek se použije jen při jednoznačné přesné shodě.
+ */
+function aresLookup_(companyName) {
+  const url = 'https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/vyhledat';
+  const rc = robotsCheck_(url);
+  if (!rc.allowed) return null;
+  politeWait_(url, 300);
+  const resp = UrlFetchApp.fetch(url, {
+    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+    headers: { 'User-Agent': P2.USER_AGENT, 'Accept': 'application/json' },
+    payload: JSON.stringify({ obchodniJmeno: oneLine_(companyName), pocet: 10 }),
+  });
+  LAST_HIT_[urlHost_(url)] = Date.now();
+  if (resp.getResponseCode() !== 200) return null;
+  return pickAresMatch_(safeJsonParse_(resp.getContentText(), {}), companyName);
 }

@@ -114,6 +114,17 @@ test('hodnocení webu: nevymýšlí – JS web bez obsahu nemá tvrzení o obsah
   assert.strictEqual(b.findings.find((f) => f.code === 'OLD_COPYRIGHT').confidence, 'MEDIUM');
   assert.strictEqual(U.call('pickPostreh_', b.findings.filter((f) => f.code === 'OLD_COPYRIGHT')), '');
 });
+test('hodnocení webu: parkovaná doména / výchozí stránka serveru není „web s nedostatky“', () => {
+  const { PARKED_WRAPPER } = require('./fixtures');
+  const a = U.call('analyzeSite_', { url: 'https://x.cz/', finalUrl: 'https://x.cz/', ok: true, status: 200, html: PARKED_WRAPPER, elapsedMs: 100, httpsOk: true, nowYear: 2026 });
+  deq(a.findings.map((f) => f.code), ['PARKED_DOMAIN']);
+  assert(/parkovací stránka/.test(a.findings[0].postreh));
+  const ng = U.call('analyzeSite_', { url: 'http://y.cz/', finalUrl: 'http://y.cz/', ok: true, status: 200, html: '<html><head><title>Welcome to nginx!</title></head><body><h1>Welcome to nginx!</h1></body></html>', elapsedMs: 100, httpsOk: false, nowYear: 2026 });
+  deq(ng.findings.map((f) => f.code), ['PARKED_DOMAIN']);
+  const em = U.call('analyzeSite_', { url: 'https://e.cz/', finalUrl: 'https://e.cz/', ok: true, status: 200, html: ' ', elapsedMs: 100, httpsOk: true, nowYear: 2026 });
+  assert(/prázdná stránka/.test(em.findings[0].text));
+  assert.strictEqual(U.call('webQualityScore_', a.findings, a.facts, true).score, null);
+});
 test('právní brána: každá podmínka souhlasu se vyžaduje', () => {
   const c = { contact_id: 'P2-1', email: 'a@b.cz' };
   const good = { consent_id: 'C', email: 'a@b.cz', legal_basis: 'CONSENT', scope: 'sc', source: 'form', evidence_ref: 'e', obtained_at: '2026-01-01', verified: 'TRUE' };
@@ -184,6 +195,17 @@ test('deduplikace: duplicitní makléř v katalogu = 1 záznam; stejný makléř
   assert.strictEqual(byName(E, 'Karel Malý').email_shared, 'TRUE');
   assert.strictEqual(byName(E, 'Jan Svoboda').office_size, '1', 'duplicitní záznam nesmí zvýšit velikost kanceláře');
   assert.strictEqual(byName(E, 'Petra Malá').office_size, '3');
+  // makléř bez odkazu na kancelář → kancelář dohledána přes shodnou doménu e-mailu (město doloženo katalogem)
+  const iva = byName(E, 'Iva Nová');
+  assert.strictEqual(iva.city, 'Olomouc'); assert.strictEqual(iva.office_name, 'PR Reality');
+  assert(!contacts(E).some((c) => c.contact_type === 'OFFICE' && c.office_name === 'Parked Reality s.r.o.'), 'kancelář spárovaná s makléřem nemá být zvlášť');
+  // ARES: město ze sídla jen při jednoznačné přesné shodě názvu
+  const mf = byName(E, 'Marek Firemní');
+  assert.strictEqual(mf.city, 'Zlín'); assert.strictEqual(mf.city_source, 'ARES_SIDLO'); assert.strictEqual(mf.ico, '12345678');
+  const od = byName(E, 'Olga Dvojí');
+  assert.strictEqual(od.city, '', 'nejednoznačná shoda v ARES nesmí doplnit město');
+  assert(!E.routerState.aresQueries.includes('Novák reality'), 'ARES jen pro názvy s právní formou');
+  assert.strictEqual(byName(E, 'Jan Svoboda').city_source, 'CATALOG');
   // nová osoba ze srovnání – lokalita doplněna z profilu
   assert.strictEqual(byName(E, 'Nová Osoba').city, 'Olomouc');
 });
@@ -205,6 +227,9 @@ test('audit: starý web (HTTP fallback, pomalý, bez mobilu) vs moderní vs nedo
   assert(JSON.parse(big.findings_json).some((x) => x.code === 'UNREACHABLE' && /500/.test(x.text)));
   const rb = byName(E, 'Ondřej Tichý');
   assert.strictEqual(rb.audit_status, 'ROBOTS_BLOCKED'); assert.strictEqual(rb.web_score, '');
+  const ivaf = JSON.parse(byName(E, 'Iva Nová').findings_json).map((x) => x.code);
+  assert(ivaf.includes('PARKED_DOMAIN') && !ivaf.includes('NO_TITLE'), ivaf.join());
+  assert.strictEqual(byName(E, 'Iva Nová').web_score, '');
   const novak = byName(E, 'Pavel Novák');
   const nf = JSON.parse(novak.findings_json).map((x) => x.code);
   assert(nf.includes('NO_WEBSITE') && nf.includes('FREEMAIL'));

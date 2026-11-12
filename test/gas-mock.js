@@ -163,6 +163,9 @@ function curlFetch(url, opts, log) {
   const ua = (opts.headers && (opts.headers['User-Agent'] || opts.headers['user-agent'])) || 'ProjectTwoBot/1.0';
   const args = ['-sS', '-m', '30', '--compressed', '-A', ua, '-D', '-', '-o', tmp];
   if (opts.followRedirects !== false) args.push('-L');
+  if (opts.method && opts.method.toLowerCase() !== 'get') args.push('-X', opts.method.toUpperCase());
+  if (opts.contentType) args.push('-H', 'Content-Type: ' + opts.contentType);
+  if (opts.payload !== undefined) args.push('--data-binary', typeof opts.payload === 'string' ? opts.payload : JSON.stringify(opts.payload));
   Object.entries(opts.headers || {}).forEach(([k, v]) => { if (k.toLowerCase() !== 'user-agent') args.push('-H', `${k}: ${v}`); });
   args.push(url);
   const t0 = Date.now();

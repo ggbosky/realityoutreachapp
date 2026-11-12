@@ -67,6 +67,7 @@ const OFFICES_P2 = [
   arkOffice(6, 'office-only', 'Office Only s.r.o.', 'Nová 2', '301 00', 'Plzeň', 'Plzeňský', '', 'info@officeonly.cz', ''),
   arkOffice(7, 'robots-blocked', 'Robots Blocked s.r.o.', 'Tichá 4', '460 01', 'Liberec', 'Liberecký', '', 'a@noaudit.cz', 'https://noaudit.cz'),
   arkOffice(8, 'webnode-only', 'Petr Webnode', 'Malá 1', '500 02', 'Hradec Králové', 'Královéhradecký', '', 'petr@seznam.cz', 'https://petrreality.webnode.cz'),
+  arkOffice(9, 'parked-reality', 'Parked Reality s.r.o.', 'Zelená 8', '779 00', 'Olomouc', 'Olomoucký', '', 'info@parked-reality.cz', ''),
 ];
 const BROKERS_P1 = [
   arkBroker(101, 'Jan Svoboda', { link: '1-jan-svoboda', name: 'Jan Svoboda' }, '+420 777 111 222', 'jan@svoboda-reality.cz'),
@@ -82,6 +83,9 @@ const BROKERS_P2 = [
   arkBroker(109, 'Lenka Bezmailová', { name: 'Neznámá RK' }, '', ''),
   arkBroker(110, 'Ondřej Tichý', { link: '7-robots-blocked', name: 'Robots Blocked s.r.o.' }, '', 'a@noaudit.cz'),
   arkBroker(111, 'Petr Webnode', { link: '8-webnode-only', name: 'Petr Webnode' }, '', 'petr@seznam.cz'),
+  arkBroker(112, 'Iva Nová', { name: 'PR Reality' }, '', 'iva@parked-reality.cz'), // kancelář bez odkazu → párování přes doménu e-mailu
+  arkBroker(113, 'Marek Firemní', { name: 'Firemní Reality s.r.o.' }, '', 'marek@seznam.cz'), // město jen z ARES
+  arkBroker(114, 'Olga Dvojí', { name: 'Dvojí Reality s.r.o.' }, '', 'olga@email.cz'), // ARES nejednoznačné → město zůstane prázdné
 ];
 
 const SROVNANI_LIST = `<html><body><table>
@@ -123,11 +127,16 @@ const WEBNODE_SITE = `<!doctype html><html><head><meta name="viewport" content="
 <meta name="description" content="Reality Petr"><meta property="og:title" content="x"></head><body><nav class="menu"></nav><h1>Petr reality</h1>
 <p>nabídka nemovitostí prodej byty domy pozemky reference</p><img alt="a"><img alt="b"><img alt="c"><a href="tel:1">t</a><footer>© 2026</footer></body></html>`;
 
+// Struktura parkovací stránky FORPSI (zachyceno 2026-11-12 na skutečných doménách)
+const PARKED_WRAPPER = `<!DOCTYPE html><html><head><style type="text/css">body, html {margin:0;}</style></head><body>
+<script>var userLang = navigator.language || navigator.userLanguage; switch (userLang) { case "cs": isrc = "CZ/index.html"; break; default: isrc = "EN/index.html"; }
+document.getElementById("ifr").src = isrc;</script><iframe id="ifr" width="100%" height="100%" frameborder="0" src=""></iframe></body></html>`;
+
 /** Router simulovaného internetu. state umožní měnit chování během testu. */
 function makeRouter(state = {}) {
   const html = (body, code = 200, ms = 120) => ({ code, body, ms, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   const text = (body, code = 200) => ({ code, body, ms: 30, headers: { 'Content-Type': 'text/plain' } });
-  return function route(url) {
+  return function route(url, opts = {}) {
     state.hits = state.hits || {};
     state.hits[url] = (state.hits[url] || 0) + 1;
     const u = url.replace(/#.*$/, '');
@@ -157,9 +166,18 @@ function makeRouter(state = {}) {
     if (u === 'https://officeonly.cz/') return { code: 301, headers: { Location: 'https://www.officeonly.cz/' }, body: '' };
     if (u === 'https://www.officeonly.cz/') return html(OFFICEONLY_SITE);
     if (u === 'https://petrreality.webnode.cz/') return html(WEBNODE_SITE);
+    if (u === 'https://ares.gov.cz/robots.txt') return text('User-agent: *\nDisallow: /cms/\n');
+    if (u === 'https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/vyhledat') {
+      const q = JSON.parse(opts.payload).obchodniJmeno;
+      state.aresQueries = (state.aresQueries || []).concat([q]);
+      const subj = { 'Firemní Reality s.r.o.': [{ ico: '12345678', obchodniJmeno: 'Firemní reality s. r. o.', sidlo: { nazevObce: 'Zlín', textovaAdresa: 'Náměstí 1, 76001 Zlín' } }, { ico: '87654321', obchodniJmeno: 'Firemní Reality Plus s.r.o.', sidlo: { nazevObce: 'Brno' } }],
+        'Dvojí Reality s.r.o.': [{ ico: '1', obchodniJmeno: 'Dvojí Reality s.r.o.', sidlo: { nazevObce: 'Kolín' } }, { ico: '2', obchodniJmeno: 'Dvojí reality, s.r.o.', sidlo: { nazevObce: 'Most' } }] }[q] || [];
+      return { code: 200, ms: 50, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pocetCelkem: subj.length, ekonomickeSubjekty: subj }) };
+    }
+    if (u === 'https://parked-reality.cz/') return html(PARKED_WRAPPER);
     if (u === 'https://seznam.cz/') return html('freemail – should never be fetched', 200);
     return undefined; // neexistující host → DNS error
   };
 }
 
-module.exports = { makeRouter, OLD_SITE, MODERN_SITE };
+module.exports = { makeRouter, OLD_SITE, MODERN_SITE, PARKED_WRAPPER };

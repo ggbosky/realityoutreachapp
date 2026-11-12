@@ -451,7 +451,7 @@ async function openContact(id) {
   $('#dTitle').textContent = (c.full_name || c.office_name) + ' · ' + id;
   $('#dBody').innerHTML =
     '<dl class="kv"><dt>Kancelář</dt><dd>' + esc(c.office_name) + (c.office_size ? ' <span class="muted">(' + esc(c.office_size) + ' makl. v katalogu)</span>' : '') + '</dd>' +
-    '<dt>Město / kraj</dt><dd>' + esc(c.city) + ' ' + esc(c.region) + '</dd><dt>E-mail</dt><dd>' + esc(c.email) + '</dd><dt>Telefon</dt><dd>' + esc(c.phone) + '</dd>' +
+    '<dt>Město / kraj</dt><dd>' + esc(c.city) + ' ' + esc(c.region) + (c.city_source ? ' <span class="muted small">(' + esc(c.city_source) + ')</span>' : '') + (c.ico ? ' · IČO ' + esc(c.ico) : '') + '</dd><dt>E-mail</dt><dd>' + esc(c.email) + '</dd><dt>Telefon</dt><dd>' + esc(c.phone) + '</dd>' +
     '<dt>Web</dt><dd>' + (c.website ? '<a href="' + esc(c.website) + '" target="_blank" rel="noopener">' + esc(c.website) + '</a> <span class="muted small">(' + esc(c.website_source) + ')</span>' : '—') + '</dd>' +
     '<dt>Zdroje</dt><dd>' + esc(c.sources) + '<div class="small">' + String(c.source_profile_urls || '').split('\n').filter(Boolean).map((u) => '<a href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(u) + '</a>').join('<br>') + '</div></dd>' +
     '<dt>Získáno</dt><dd>' + d(c.first_seen_at) + ' (naposledy viděn ' + d(c.last_seen_at) + ')</dd>' +

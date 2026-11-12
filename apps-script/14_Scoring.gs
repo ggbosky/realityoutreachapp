@@ -19,10 +19,8 @@ const CATEGORY_LABELS = {
 function webQualityScore_(findings, facts, hasWebsite) {
   const breakdown = {};
   Object.keys(SCORE_WEIGHTS).forEach(function (k) { breakdown[k] = 100; });
-  if (!hasWebsite) {
-    Object.keys(breakdown).forEach(function (k) { breakdown[k] = 0; });
-    return { score: 0, breakdown: breakdown };
-  }
+  // Bez webu (nebo jen parkovaná doména) se web nehodnotí – skóre „–“, nikoli 0.
+  if (!hasWebsite || findings.some(function (f) { return f.code === 'PARKED_DOMAIN'; })) return { score: null, breakdown: {} };
   if (findings.some(function (f) { return f.code === 'ROBOTS_BLOCKED'; })) return { score: null, breakdown: {} };
   if (findings.some(function (f) { return f.code === 'UNREACHABLE'; })) {
     Object.keys(breakdown).forEach(function (k) { breakdown[k] = 0; });
@@ -54,12 +52,14 @@ function webQualityScore_(findings, facts, hasWebsite) {
 
 /** Skóre obchodního potenciálu. */
 function potentialScore_(webScore, pre, c, findings) {
-  const need = webScore === null ? 40 : (100 - webScore);
+  const noWeb = findings.some(function (f) { return f.code === 'NO_WEBSITE' || f.code === 'PARKED_DOMAIN'; });
+  // Chybějící web = velká, ale ne jistá potřeba (makléř o web nemusí stát); zastaralý web je silnější signál.
+  const need = noWeb ? 75 : (webScore === null ? 40 : (100 - webScore));
   let p = Math.round(0.65 * need + 0.35 * pre);
   const email = normEmail_(c.email);
   if (isFranchise_(c.office_name) || isFranchise_(emailDomain_(email))) p = Math.min(p, 35);
   if (!email) p = Math.min(p, 45);
-  if (findings.some(function (f) { return f.code === 'NO_WEBSITE'; }) && email) p = Math.max(p, 70);
+  if (noWeb && email) p = Math.max(p, 70);
   if (findings.some(function (f) { return f.code === 'UNREACHABLE'; }) && email) p = Math.max(p, 80);
   return Math.max(0, Math.min(100, p));
 }
@@ -67,8 +67,9 @@ function potentialScore_(webScore, pre, c, findings) {
 function redesignOpportunity_(webScore, findings) {
   const top = findings.filter(function (f) { return f.severity >= 2; }).sort(function (a, b) { return b.severity - a.severity; })
     .slice(0, 3).map(function (f) { return f.text.replace(/\.$/, ''); });
-  if (webScore === null) return 'Nehodnoceno (web zakazuje analýzu).';
+  if (findings.some(function (f) { return f.code === 'PARKED_DOMAIN'; })) return 'Vysoká – makléř má doménu, ale na ní jen parkovací/výchozí stránku.';
   if (findings.some(function (f) { return f.code === 'NO_WEBSITE'; })) return 'Vysoká – makléř nemá vlastní web.';
+  if (webScore === null) return 'Nehodnoceno (web zakazuje analýzu).';
   if (webScore < 45) return 'Vysoká – ' + top.join('; ');
   if (webScore < 70) return 'Střední – ' + (top.join('; ') || 'drobné nedostatky');
   return 'Nízká – web je v dobrém stavu' + (top.length ? ' (' + top.join('; ') + ')' : '');
@@ -78,7 +79,7 @@ function recommendService_(findings, webScore) {
   const map = safeJsonParse_(setting_('SERVICE_MAP_JSON'), {}) || {};
   const has = function (c) { return findings.some(function (f) { return f.code === c; }); };
   let key = 'DEFAULT';
-  if (has('NO_WEBSITE')) key = 'NO_WEBSITE';
+  if (has('NO_WEBSITE') || has('PARKED_DOMAIN')) key = 'NO_WEBSITE';
   else if (has('UNREACHABLE')) key = 'UNREACHABLE';
   else if (has('NO_OWN_DOMAIN')) key = 'NO_OWN_DOMAIN';
   else if (has('FLASH') || has('FRAMESET') || has('TABLE_LAYOUT') || has('FONT_TAGS') || has('OLD_COPYRIGHT') || (webScore !== null && webScore < 45)) key = 'OUTDATED';
@@ -91,7 +92,7 @@ function recommendService_(findings, webScore) {
 
 /** Nejsilnější prokazatelné zjištění pro {{konkretni_postreh}} (jen confidence HIGH a s připraveným textem). */
 function pickPostreh_(findings) {
-  const order = ['UNREACHABLE', 'NO_WEBSITE', 'FLASH', 'FRAMESET', 'NO_VIEWPORT', 'FIXED_VIEWPORT', 'NO_OWN_DOMAIN',
+  const order = ['UNREACHABLE', 'PARKED_DOMAIN', 'NO_WEBSITE', 'FLASH', 'FRAMESET', 'NO_VIEWPORT', 'FIXED_VIEWPORT', 'NO_OWN_DOMAIN',
     'OLD_COPYRIGHT', 'PSI_MOBILE_SLOW', 'OLD_CMS', 'NO_HTTPS', 'FREEMAIL'];
   for (let i = 0; i < order.length; i++) {
     const f = findings.filter(function (x) { return x.code === order[i] && x.confidence === 'HIGH' && x.postreh; })[0];
