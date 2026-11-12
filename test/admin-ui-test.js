@@ -154,6 +154,7 @@ const server = http.createServer((req, res) => {
   });
   await check('Tlačítko „Zastavit vše“ zastaví systém', async () => {
     await page.click('#btnStop');
+    await page.click('#mOk');
     await page.waitForFunction(() => /zastaven/.test(document.querySelector('#pillSystem').textContent));
     assert.strictEqual(env.eval(`setting_('SYSTEM_ENABLED')`), 'FALSE');
     assert.strictEqual(env.triggers.length, 0);

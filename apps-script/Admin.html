@@ -45,6 +45,8 @@ header.top h1{font-size:18px;margin:0;letter-spacing:-.01em}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .wrap{padding:24px 28px 60px;max-width:1400px}
 .grid{display:grid;gap:16px}
+.grid>*{min-width:0}
+.scroll-x{overflow-x:auto}
 .kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
 .card h3{margin:0 0 12px;font-size:13px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.04em}
@@ -97,9 +99,13 @@ label.f .hint{font-weight:400;color:var(--muted)}
 .drawer .dh{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:16px 20px;display:flex;gap:10px;align-items:center}
 .drawer .db{padding:16px 20px}
 dl.kv{display:grid;grid-template-columns:150px 1fr;gap:6px 12px;margin:0;font-size:13px}
-dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;word-break:break-word}
+dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;overflow-wrap:anywhere}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;z-index:50;display:none;max-width:90vw}
 .toast.err{background:var(--danger)}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:60;display:grid;place-items:center;padding:16px}
+.modal-bg[hidden]{display:none}
+.modal{background:#fff;border-radius:14px;padding:20px;max-width:440px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.modal p{margin:0 0 4px;font-weight:500}
 .section{display:none}.section.active{display:block}
 .src{display:grid;gap:10px}
 .srch{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -324,6 +330,10 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;word-break:break-word}
 <div class="drawer-bg" id="dBg"></div>
 <div class="drawer" id="drawer"><div class="dh"><b id="dTitle">Kontakt</b><div class="spacer"></div><button class="btn sm" id="dClose">Zavřít</button></div><div class="db" id="dBody"></div></div>
 <div class="toast" id="toast"></div>
+<div class="modal-bg" id="mBg" hidden><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mText">
+  <p id="mText"></p><input type="text" id="mInput" hidden>
+  <div class="toolbar" style="margin:16px 0 0;justify-content:flex-end"><button class="btn" id="mCancel">Zrušit</button><button class="btn primary" id="mOk">OK</button></div>
+</div></div>
 
 <script>
 (function(){
@@ -347,6 +357,20 @@ function toast(msg, err) {
   clearTimeout(toast._t); toast._t = setTimeout(() => { t.style.display = 'none'; }, err ? 7000 : 3000);
 }
 const B = (v) => String(v).toUpperCase() === 'TRUE';
+/** Vlastní potvrzovací dialog (systémové confirm/prompt nemusí být v rámu dostupné). */
+function modal(text, okLabel, withInput, def) {
+  return new Promise((resolve) => {
+    $('#mText').textContent = text; $('#mOk').textContent = okLabel || 'OK';
+    const inp = $('#mInput'); inp.hidden = !withInput; inp.value = def || '';
+    $('#mBg').hidden = false; (withInput ? inp : $('#mOk')).focus();
+    const done = (v) => { $('#mBg').hidden = true; $('#mOk').onclick = $('#mCancel').onclick = inp.onkeydown = null; resolve(v); };
+    $('#mOk').onclick = () => done(withInput ? inp.value : true);
+    $('#mCancel').onclick = () => done(withInput ? null : false);
+    inp.onkeydown = (e) => { if (e.key === 'Enter') done(inp.value); if (e.key === 'Escape') done(null); };
+  });
+}
+const ask = (text, okLabel) => modal(text, okLabel, false);
+const askText = (text, def) => modal(text, 'Potvrdit', true, def);
 function badge(v) {
   const m = { AUTHORIZED:'ok', READY:'ok', SENT:'ok', OK:'ok', DONE:'ok', SCORED:'', NEEDS_LEGAL_REVIEW:'warn', DRAFT_INTERNAL:'warn', MISSING_DATA:'warn',
     NEEDS_TOS_REVIEW:'warn', TEST_NOT_SENT:'', SUPPRESSED:'bad', BLOCKED:'bad', BLOCKED_ROBOTS:'bad', BLOCKED_TOS:'bad', FAILED:'bad', ERROR:'bad',
@@ -377,7 +401,7 @@ $('#btnRefresh').addEventListener('click', () => show(state.section));
 
 /* ---------- STOP ---------- */
 $('#btnStop').addEventListener('click', async () => {
-  if (!confirm('Zastavit celý proces? Vypne se hlavní vypínač, automatické odesílání a odstraní plánovač.')) return;
+  if (!(await ask('Zastavit celý proces? Vypne se hlavní vypínač, automatické odesílání a odstraní plánovač.', 'Zastavit vše'))) return;
   await call('apiEmergencyStop'); toast('Vše zastaveno.'); show(state.section);
 });
 
@@ -421,8 +445,8 @@ async function loadDashboard() {
       (r.lastSend ? '<dt>Poslední odesílání</dt><dd>' + esc(JSON.stringify(r.lastSend)) + '</dd>' : '') + '</dl>';
   }
   $('#srcBox').innerHTML = r.sources.map((s) => '<div class="switch"><div><b>' + esc(s.name) + '</b><span class="d">' + esc(s.last_found || 0) + ' nalezeno při posledním běhu</span></div>' + badge(s.status) + '</div>').join('');
-  $('#campBox').innerHTML = r.campaigns.length ? '<table><thead><tr><th>Den</th><th>Nové</th><th>Vysoký</th><th>Koncepty</th><th>Odesláno</th><th>Stav</th></tr></thead><tbody>' +
-    r.campaigns.map((c) => '<tr><td>' + esc(c.run_date) + '</td><td>' + esc(c.new_contacts) + '</td><td>' + esc(c.high_potential) + '</td><td>' + esc(c.drafts) + '</td><td>' + esc(c.sent) + '</td><td>' + badge(c.status) + (c.shortfall_reason ? ' <span class="muted small" title="' + esc(c.shortfall_reason) + '">ⓘ</span>' : '') + '</td></tr>').join('') + '</tbody></table>' : '<div class="muted">Žádné běhy.</div>';
+  $('#campBox').innerHTML = r.campaigns.length ? '<div class="scroll-x"><table><thead><tr><th>Den</th><th>Nové</th><th>Vysoký</th><th>Koncepty</th><th>Odesláno</th><th>Stav</th></tr></thead><tbody>' +
+    r.campaigns.map((c) => '<tr><td>' + esc(c.run_date) + '</td><td>' + esc(c.new_contacts) + '</td><td>' + esc(c.high_potential) + '</td><td>' + esc(c.drafts) + '</td><td>' + esc(c.sent) + '</td><td>' + badge(c.status) + (c.shortfall_reason ? ' <span class="muted small" title="' + esc(c.shortfall_reason) + '">ⓘ</span>' : '') + '</td></tr>').join('') + '</tbody></table></div>' : '<div class="muted">Žádné běhy.</div>';
   $('#errBox').innerHTML = r.recentErrors.length ? r.recentErrors.map((e) => '<div style="padding:6px 0;border-bottom:1px solid var(--line-2)">' + badge(e.severity) + ' <span class="small muted">' + d(e.ts) + ' · ' + esc(e.job) + ' ' + esc(e.source) + '</span><div class="small">' + esc(e.message) + '</div></div>').join('') : '<div class="muted">Bez chyb.</div>';
 }
 
@@ -473,7 +497,7 @@ async function openContact(id) {
   $('#dPreview').onclick = () => { closeDrawer(); show('templates'); $('#pId').value = id; runPreview(); };
   if (c.email) {
     $('#dConsent').onclick = () => { closeDrawer(); show('legal'); $('#lEmail').value = c.email; $('#lCid').value = id; };
-    $('#dSupp').onclick = async () => { const why = prompt('Důvod vyřazení:', 'Ručně – nekontaktovat'); if (why === null) return; await call('apiAddSuppression', c.email, why); toast('Přidáno do suppression'); openContact(id); };
+    $('#dSupp').onclick = async () => { const why = await askText('Důvod vyřazení:', 'Ručně – nekontaktovat'); if (why === null) return; await call('apiAddSuppression', c.email, why); toast('Přidáno do suppression'); openContact(id); };
   }
 }
 function closeDrawer() { $('#drawer').classList.remove('open'); $('#dBg').classList.remove('open'); }
@@ -557,9 +581,9 @@ async function loadLegal() {
   if (!$('#lScope').value) $('#lScope').value = r.scope;
   if (!$('#lDate').value) $('#lDate').value = new Date().toISOString().substring(0, 10);
   $('#consBody').innerHTML = r.consents.length ? r.consents.map((c) => '<tr><td class="mono">' + esc(c.consent_id) + '</td><td>' + esc(c.email) + '</td><td>' + esc(c.legal_basis) + '</td><td>' + esc(c.scope) + '</td><td class="small">' + esc(c.source) + '<div class="muted">' + esc(c.evidence_ref) + '</div></td><td class="small">' + esc(c.obtained_at) + (c.valid_until ? ' → ' + esc(c.valid_until) : '') + '</td><td>' + (B(c.verified) ? badge('OK') : badge('NEOVĚŘENO')) + '</td><td>' + (c.withdrawn_at ? badge('BLOCKED') + '<div class="small muted">' + d(c.withdrawn_at) + '</div>' : badge('AUTHORIZED')) + '</td><td>' + (c.withdrawn_at ? '' : '<button class="btn sm" data-wd="' + esc(c.consent_id) + '">Odvolat</button>') + '</td></tr>').join('') : '<tr><td colspan="9" class="loading">Žádné záznamy – bez nich se nic automaticky neodešle.</td></tr>';
-  $$('[data-wd]').forEach((b) => b.onclick = async () => { const why = prompt('Důvod odvolání:'); if (why === null) return; await call('apiWithdrawConsent', b.dataset.wd, why); toast('Odvoláno'); loadLegal(); });
+  $$('[data-wd]').forEach((b) => b.onclick = async () => { const why = await askText('Důvod odvolání:', ''); if (why === null) return; await call('apiWithdrawConsent', b.dataset.wd, why); toast('Odvoláno'); loadLegal(); });
   $('#supBody').innerHTML = r.suppression.length ? r.suppression.map((s) => '<tr><td>' + esc(s.email) + '</td><td>' + badge(s.source) + '</td><td class="small">' + esc(s.reason) + '</td><td class="small">' + d(s.added_at) + '</td><td><button class="btn sm" data-rm="' + esc(s.email) + '">Odebrat</button></td></tr>').join('') : '<tr><td colspan="5" class="loading">Prázdné.</td></tr>';
-  $$('[data-rm]').forEach((b) => b.onclick = async () => { const why = prompt('Odebrání ze suppression je výjimečné. Uveďte důvod (např. přidáno omylem):'); if (!why) return; await call('apiRemoveSuppression', b.dataset.rm, why); toast('Odebráno'); loadLegal(); });
+  $$('[data-rm]').forEach((b) => b.onclick = async () => { const why = await askText('Odebrání ze suppression je výjimečné. Uveďte důvod (např. přidáno omylem):', ''); if (!why) return; await call('apiRemoveSuppression', b.dataset.rm, why); toast('Odebráno'); loadLegal(); });
 }
 $('#lSave').onclick = async () => {
   const rec = { email: $('#lEmail').value.trim(), contact_id: $('#lCid').value.trim(), legal_basis: $('#lBasis').value, scope: $('#lScope').value.trim(), source: $('#lSource').value.trim(), evidence_ref: $('#lEvidence').value.trim(), obtained_at: $('#lDate').value, valid_until: $('#lUntil').value, consent_text: $('#lText').value, verified: $('#lVerified').checked };
@@ -580,7 +604,7 @@ async function loadAutomation() {
     try {
       if (k === 'SYSTEM_ENABLED') { if (el.checked) await call('apiResume'); else await call('apiEmergencyStop'); }
       else if (k === 'TEST_MODE' && !el.checked) {
-        if (!confirm('Vypnout testovací režim? Systém pak bude skutečně odesílat e-maily kontaktům s doloženým oprávněním (při zapnutém automatickém odesílání).')) { el.checked = true; return; }
+        if (!(await ask('Vypnout testovací režim? Systém pak bude skutečně odesílat e-maily kontaktům s doloženým oprávněním (při zapnutém automatickém odesílání).', 'Vypnout testovací režim'))) { el.checked = true; return; }
         await call('apiSaveAutomation', { TEST_MODE: 'FALSE', confirmLive: true });
       } else { const p = {}; p[k] = v; await call('apiSaveAutomation', p); }
       toast('Uloženo'); loadAutomation(); refreshHeader();
@@ -593,7 +617,7 @@ $('#aSave').onclick = async () => { const p = {}; $$('[data-a]').forEach((el) =>
 $('#aResume').onclick = async () => { await call('apiResume'); toast('Provoz obnoven, plánovač nainstalován. Odesílání zůstává, jak bylo nastaveno.'); loadAutomation(); };
 $('#aTrig').onclick = async () => { await call('apiInstallTriggers'); toast('Plánovač nainstalován'); loadAutomation(); };
 $('#aScan').onclick = async () => { $('#aOut').innerHTML = '<div class="loading">Skenuji (max. 4 min, pak pokračuje plánovač)…</div>'; const r = await call('apiRunScanNow', false).catch(() => null); $('#aOut').innerHTML = r ? '<div class="notice small">Fáze: ' + badge(r.phase) + ' · nových: ' + esc((r.counters || {}).new || 0) + (r.shortfall ? '<br>' + esc(r.shortfall) : '') + '</div>' : ''; };
-$('#aSend').onclick = async () => { if (!confirm('Spustit odesílání teď? (V testovacím režimu se nic neodešle.)')) return; const r = await call('apiRunSendNow'); $('#aOut').innerHTML = '<div class="notice small">' + esc(JSON.stringify(r)) + '</div>'; };
+$('#aSend').onclick = async () => { if (!(await ask('Spustit odesílání teď? V testovacím režimu se nic neodešle.', 'Spustit odesílání'))) return; const r = await call('apiRunSendNow'); $('#aOut').innerHTML = '<div class="notice small">' + esc(JSON.stringify(r)) + '</div>'; };
 $('#aTests').onclick = async () => { $('#aOut').innerHTML = '<div class="loading">Testuji…</div>'; const r = await call('apiRunSelfTests'); $('#aOut').innerHTML = '<div class="notice small"><b>' + r.passed + ' OK, ' + r.failed + ' chyb</b><br>' + r.results.map((x) => (x.ok ? '✓ ' : '✗ ') + esc(x.name) + ' <span class="muted">' + esc(x.ok ? x.info : x.error) + '</span>').join('<br>') + '</div>'; };
 
 show('dashboard');
